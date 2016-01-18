@@ -9,11 +9,14 @@
 from tensorflow.examples.tutorials.mnist import input_data
 import tensorflow as tf
 import sys
+import numpy as np
 
 # Load the dataset
 mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
 
-mnist_img_size = 784
+mnist_width = 28
+mnist_height = 28
+mnist_img_size = mnist_width * mnist_height
 mnist_nb_labels = 10
 mini_batch_size = 100
 
@@ -70,7 +73,7 @@ plt.figure()
 plt.plot(validation_accuracies, 'b', label='validation')
 plt.plot(empirical_accuracies, 'r', label='empirical')
 plt.legend()
-plt.show()
+#plt.show()
 
 ##################################
 # Model evaluation
@@ -78,3 +81,31 @@ empirical_accuracy = sess.run(accuracy, feed_dict={x: mnist.train.images, y_: mn
 validation_accuracy = sess.run(accuracy, feed_dict={x: mnist.validation.images, y_: mnist.validation.labels})
 test_accuracy = sess.run(accuracy, feed_dict={x: mnist.test.images, y_: mnist.test.labels})
 print("Accuracies : \n Empirical : %f, Validation : %f , Test : %f\n" %(empirical_accuracy, validation_accuracy, test_accuracy))
+
+####################################
+###### visualisation of the weights
+weights = sess.run(W)
+biases = sess.run(b)
+
+# We now plot the 10 weights
+import matplotlib.gridspec as gridspec
+nc = int(np.sqrt(weights.shape[1]))
+nr = int(np.ceil(float(weights.shape[1]) / nc))
+gs = gridspec.GridSpec(nr, nc)
+
+
+vmin = -np.max(map(np.abs, [weights.min(), weights.max()]))
+vmax = np.max(map(np.abs, [weights.min(), weights.max()]))
+print("Weights will be shown normalized in [%f, %f]" % (vmin, vmax))
+
+plt.figure()
+w_index = 0
+for i in range(nr):
+    for j in range(nc):
+        if(w_index >= weights.shape[1]):
+            break
+        ax = plt.subplot(gs[i,j])
+        ax.imshow(weights[:,w_index].reshape((mnist_height, mnist_width)),vmin=vmin, vmax=vmax, cmap='gray')
+        w_index += 1
+
+plt.show()
