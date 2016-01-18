@@ -10,6 +10,8 @@
 from tensorflow.examples.tutorials.mnist import input_data
 import tensorflow as tf
 import sys
+import numpy as np
+import matplotlib.pyplot as plt
 
 # Load the dataset
 mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
@@ -89,7 +91,7 @@ accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
 sess = tf.Session()
 sess.run(tf.initialize_all_variables())
 
-Nsteps = 20000
+Nsteps = 2
 for i in range(Nsteps):
     sys.stdout.write("\r Step %i / %i " % (i+1, Nsteps))
     sys.stdout.flush()
@@ -98,6 +100,55 @@ for i in range(Nsteps):
         train_accuracy = sess.run(accuracy, feed_dict={x:batch[0], y_: batch[1], keep_prob: 1.0})
         sys.stdout.write("\r step %d, training accuracy %g\n"%(i, train_accuracy))
         sys.stdout.flush()
+
     sess.run(train_step,feed_dict={x: batch[0], y_: batch[1], keep_prob: 0.5})
 
-print("test accuracy %g"% sess.run(accuracy,feed_dict={x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
+print("")
+# We split the test set, otherwise, I get a memory overflow
+nb_test = mnist.test.images.shape[0] / 2
+test_images_1 = mnist.test.images[:nb_test]
+test_labels_1 = mnist.test.labels[:nb_test]
+nb_test_1 = len(test_labels_1)
+test_images_2 = mnist.test.images[nb_test:]
+test_labels_2 = mnist.test.labels[nb_test:]
+nb_test_2 = len(test_labels_2)
+acc_test_1 = sess.run(accuracy,feed_dict={x: test_images_1, y_: test_labels_1, keep_prob: 1.0})
+acc_test_2 = sess.run(accuracy,feed_dict={x: test_images_2, y_: test_labels_2, keep_prob: 1.0})
+acc_test = (nb_test_1 * acc_test_1 + nb_test_2 * acc_test_2) / (nb_test_1 + nb_test_2)
+print("test accuracy %g"% acc_test)
+
+
+### We now export the receptive fields of the different layers
+w1 = sess.run(W_conv1)
+b1 = sess.run(b_conv1)
+
+# We now plot the 10 weights
+import matplotlib.gridspec as gridspec
+nc = int(np.sqrt(w1.shape[3]))
+nr = int(np.ceil(float(w1.shape[3]) / nc))
+gs = gridspec.GridSpec(nr, nc)
+
+vmin = -np.max(map(np.abs, [w1.min(), w1.max()]))
+vmax = np.max(map(np.abs, [w1.min(), w1.max()]))
+print("Weights will be shown normalized in [%f, %f]" % (vmin, vmax))
+
+plt.figure()
+w_index = 0
+for i in range(nr):
+    for j in range(nc):
+        if(w_index >= w1.shape[3]):
+            break
+        ax = plt.subplot(gs[i,j])
+        ax.imshow(w1[:,:,0,w_index],vmin=vmin, vmax=vmax, cmap='gray')
+        ax.tick_params(
+          axis='both',          # changes apply to the x-axis
+          which='both',      # both major and minor ticks are affected
+          bottom='off',      # ticks along the bottom edge are off
+          top='off',         # ticks along the top edge are off
+          right='off',
+          left='off',
+          labelbottom='off', # labels along the bottom edge are off
+          labelleft='off') # labels along the bottom edge are off
+        w_index += 1
+
+plt.show()
