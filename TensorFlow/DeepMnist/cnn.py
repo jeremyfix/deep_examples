@@ -91,7 +91,7 @@ accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
 sess = tf.Session()
 sess.run(tf.initialize_all_variables())
 
-Nsteps = 2
+Nsteps = 200
 for i in range(Nsteps):
     sys.stdout.write("\r Step %i / %i " % (i+1, Nsteps))
     sys.stdout.flush()
