@@ -32,6 +32,8 @@ import theano
 import theano.tensor as T
 import lasagne
 import urllib2 #For downloading the sample text file. You won't need this if you are providing your own file.
+import lstm
+
 try:
     in_text = urllib2.urlopen('https://s3.amazonaws.com/text-datasets/nietzsche.txt').read()
     #You can also use your own file
@@ -60,7 +62,7 @@ lasagne.random.set_rng(np.random.RandomState(1))
 SEQ_LENGTH = 20
 
 # Number of units in the two hidden (LSTM) layers
-N_HIDDEN = 512
+N_HIDDEN = 16 # 512
 
 # Optimization learning rate
 LEARNING_RATE = .01
@@ -121,22 +123,26 @@ def main(num_epochs=NUM_EPOCHS):
     # We now build the LSTM layer which takes l_in as the input layer
     # We clip the gradients at GRAD_CLIP to prevent the problem of exploding gradients. 
 
-    l_forward_1 = lasagne.layers.LSTMLayer(
+    l_forward_1 = lstm.LSTMLayer(
         l_in, N_HIDDEN, grad_clipping=GRAD_CLIP,
         nonlinearity=lasagne.nonlinearities.tanh)
 
-    l_forward_2 = lasagne.layers.LSTMLayer(
-        l_forward_1, N_HIDDEN, grad_clipping=GRAD_CLIP,
+    # The layer is sliced to keep only the hidden activities and discarding the 
+    # the cell activities
+    l_forward_1_slice = lasagne.layers.SliceLayer(l_forward_1,1,0)
+
+    l_forward_2 = lstm.LSTMLayer(
+        l_forward_1_slice, N_HIDDEN, grad_clipping=GRAD_CLIP,
         nonlinearity=lasagne.nonlinearities.tanh)
 
-    # The l_forward layer creates an output of dimension (batch_size, SEQ_LENGTH, N_HIDDEN)
-    # Since we are only interested in the final prediction, we isolate that quantity and feed it to the next layer. 
+    # The l_forward layer creates an output of dimension (2, batch_size, SEQ_LENGTH, N_HIDDEN)
+    # Since we are only interested in the final prediction of the hidden units, we isolate that quantity and feed it to the next layer. 
     # The output of the sliced layer will then be of size (batch_size, N_HIDDEN)
-    l_forward_slice = lasagne.layers.SliceLayer(l_forward_2, -1, 1)
+    l_forward_2_slice = lasagne.layers.SliceLayer(lasagne.layers.SliceLayer(l_forward_2,1,0), -1, 1)
 
     # The sliced output is then passed through the softmax nonlinearity to create probability distribution of the prediction
     # The output of this stage is (batch_size, vocab_size)
-    l_out = lasagne.layers.DenseLayer(l_forward_slice, num_units=vocab_size, W = lasagne.init.Normal(), nonlinearity=lasagne.nonlinearities.softmax)
+    l_out = lasagne.layers.DenseLayer(l_forward_2_slice, num_units=vocab_size, W = lasagne.init.Normal(), nonlinearity=lasagne.nonlinearities.softmax)
 
     # Theano tensor for the targets
     target_values = T.ivector('target_output')

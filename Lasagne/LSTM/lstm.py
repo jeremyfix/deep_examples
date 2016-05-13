@@ -1,3 +1,4 @@
+# coding: utf-8
 # This is a modification of the implementation of Lasagne LSTMLayer 
 # https://github.com/Lasagne/Lasagne/blob/master/lasagne/layers/recurrent.py
 # It changes the output of the layer to export the cell state in addition
