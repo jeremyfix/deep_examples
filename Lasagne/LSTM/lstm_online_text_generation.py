@@ -1,3 +1,4 @@
+# coding: utf-8
 '''
 Recurrent network example.  Trains a 2 layered LSTM network to learn
 text from a user-provided input file. The network can then be used to generate
@@ -22,6 +23,10 @@ About 20 or so epochs are necessary to generate text that "makes sense".
 
 Written by @keskarnitish
 Pre-processing of text uses snippets of Karpathy's code (BSD License)
+
+Modified by @jeremyfix
+The text generation part is now online rather than batch based.
+
 '''
 
 from __future__ import print_function
@@ -62,7 +67,7 @@ lasagne.random.set_rng(np.random.RandomState(1))
 SEQ_LENGTH = 20
 
 # Number of units in the two hidden (LSTM) layers
-N_HIDDEN = 16 # 512
+N_HIDDEN = 512
 
 # Optimization learning rate
 LEARNING_RATE = .01
@@ -123,17 +128,23 @@ def main(num_epochs=NUM_EPOCHS):
     # We now build the LSTM layer which takes l_in as the input layer
     # We clip the gradients at GRAD_CLIP to prevent the problem of exploding gradients. 
 
+    cell_init_forward_1 = lasagne.layers.InputLayer(shape=(None, N_HIDDEN), name="cell_init_forward_1")
+    hid_init_forward_1 = lasagne.layers.InputLayer(shape=(None, N_HIDDEN), name="hid_init_forward_1")
+
     l_forward_1 = lstm.LSTMLayer(
         l_in, N_HIDDEN, grad_clipping=GRAD_CLIP,
-        nonlinearity=lasagne.nonlinearities.tanh)
+        nonlinearity=lasagne.nonlinearities.tanh, cell_init = cell_init_forward_1, hid_init = hid_init_forward_1)
 
     # The layer is sliced to keep only the hidden activities and discarding the 
     # the cell activities
     l_forward_1_slice = lasagne.layers.SliceLayer(l_forward_1,1,0)
 
+    cell_init_forward_2 = lasagne.layers.InputLayer(shape=(None, N_HIDDEN), name="cell_init_forward_2")
+    hid_init_forward_2 = lasagne.layers.InputLayer(shape=(None, N_HIDDEN), name="hid_init_forward_2")
+
     l_forward_2 = lstm.LSTMLayer(
         l_forward_1_slice, N_HIDDEN, grad_clipping=GRAD_CLIP,
-        nonlinearity=lasagne.nonlinearities.tanh)
+        nonlinearity=lasagne.nonlinearities.tanh, cell_init = cell_init_forward_2, hid_init = hid_init_forward_2)
 
     # The l_forward layer creates an output of dimension (2, batch_size, SEQ_LENGTH, N_HIDDEN)
     # Since we are only interested in the final prediction of the hidden units, we isolate that quantity and feed it to the next layer. 
@@ -162,14 +173,16 @@ def main(num_epochs=NUM_EPOCHS):
 
     # Theano functions for training and computing cost
     print("Compiling functions ...")
-    train = theano.function([l_in.input_var, target_values], cost, updates=updates, allow_input_downcast=True)
-    compute_cost = theano.function([l_in.input_var, target_values], cost, allow_input_downcast=True)
+    train = theano.function([l_in.input_var, target_values, cell_init_forward_1.input_var, hid_init_forward_1.input_var, cell_init_forward_2.input_var, hid_init_forward_2.input_var], cost, updates=updates, allow_input_downcast=True)
+    compute_cost = theano.function([l_in.input_var, target_values, cell_init_forward_1.input_var, hid_init_forward_1.input_var, cell_init_forward_2.input_var, hid_init_forward_2.input_var], cost, allow_input_downcast=True)
 
     # In order to generate text from the network, we need the probability distribution of the next character given
     # the state of the network and the input (a seed).
     # In order to produce the probability distribution of the prediction, we compile a function called probs. 
     
-    probs = theano.function([l_in.input_var],network_output,allow_input_downcast=True)
+    # probs = theano.function([l_in.input_var, cell_init_forward_1.input_var, hid_init_forward_1.input_var, cell_init_forward_2.input_var, hid_init_forward_2.input_var],network_output,allow_input_downcast=True)
+    probs_with_state= theano.function([l_in.input_var, cell_init_forward_1.input_var, hid_init_forward_1.input_var, cell_init_forward_2.input_var, hid_init_forward_2.input_var], [network_output, lasagne.layers.get_output(l_forward_1), lasagne.layers.get_output(l_forward_2)],allow_input_downcast=True)
+
 
     # The next function generates text given a phrase of length at least SEQ_LENGTH.
     # The phrase is set using the variable generation_phrase.
@@ -178,37 +191,38 @@ def main(num_epochs=NUM_EPOCHS):
     def try_it_out(N=200):
         '''
         This function uses the user-provided string "generation_phrase" and current state of the RNN generate text.
-        The function works in three steps:
-        1. It converts the string set in "generation_phrase" (which must be over SEQ_LENGTH characters long) 
-           to encoded format. We use the gen_data function for this. By providing the string and asking for a single batch,
-           we are converting the first SEQ_LENGTH characters into encoded form. 
-        2. We then use the LSTM to predict the next character and store it in a (dynamic) list sample_ix. This is done by using the 'probs'
-           function which was compiled above. Simply put, given the output, we compute the probabilities of the target and pick the one 
-           with the highest predicted probability. 
-        3. Once this character has been predicted, we construct a new sequence using all but first characters of the 
-           provided string and the predicted character. This sequence is then used to generate yet another character.
-           This process continues for "N" characters. 
-        To make this clear, let us again look at a concrete example. 
-        Assume that SEQ_LENGTH = 5 and generation_phrase = "The quick brown fox jumps". 
-        We initially encode the first 5 characters ('T','h','e',' ','q'). The next character is then predicted (as explained in step 2). 
-        Assume that this character was 'J'. We then construct a new sequence using the last 4 (=SEQ_LENGTH-1) characters of the previous
-        sequence ('h','e',' ','q') , and the predicted letter 'J'. This new sequence is then used to compute the next character and 
-        the process continues.
-        '''
+        It generates the text character by character in an online fashion. 
+       '''
 
-        assert(len(generation_phrase)>=SEQ_LENGTH)
-        sample_ix = []
-        x,_ = gen_data(len(generation_phrase)-SEQ_LENGTH, 1, generation_phrase,0)
+	assert(len(generation_phrase) >= 1) # We need at least one character for as input
 
-        for i in range(N):
-            # Pick the character that got assigned the highest probability
-            ix = np.argmax(probs(x).ravel())
-            # Alternatively, to sample from the distribution instead:
-            # ix = np.random.choice(np.arange(vocab_size), p=probs(x).ravel())
-            sample_ix.append(ix)
-            x[:,0:SEQ_LENGTH-1,:] = x[:,1:,:]
-            x[:,SEQ_LENGTH-1,:] = 0
-            x[0,SEQ_LENGTH-1,sample_ix[-1]] = 1. 
+        sample_ix = [] 
+
+	cell1 = np.zeros((1, N_HIDDEN))
+	hid1 = np.zeros((1, N_HIDDEN))
+	cell2 = np.zeros((1, N_HIDDEN))
+	hid2 = np.zeros((1, N_HIDDEN))
+	proba = np.zeros((vocab_size,))
+
+        # Bring in the seed
+	for c in generation_phrase:
+		ix = char_to_ix[c]
+		x = np.zeros((1, 1, vocab_size))
+		x[0, 0, ix] = 1
+                proba, state1, state2 = probs_with_state(x, cell1, hid1, cell2, hid2)
+		cell1[:], hid1[:] = state1[0], state1[1]
+		cell2[:], hid2[:] = state2[0], state2[1]
+		
+
+ 	# And then we generate the following
+	for i in range(N):
+		ix = np.argmax(proba)
+		x = np.zeros((1, 1, vocab_size))
+		x[0, 0, ix] = 1
+                proba, state1, state2 = probs_with_state(x, cell1, hid1, cell2, hid2)
+		cell1[:], hid1[:] = state1[0], state1[1]
+		cell2[:], hid2[:] = state2[0], state2[1]
+		sample_ix.append(np.argmax(proba))
 
         random_snippet = generation_phrase + ''.join(ix_to_char[ix] for ix in sample_ix)    
         print("----\n %s \n----" % random_snippet)
@@ -217,10 +231,12 @@ def main(num_epochs=NUM_EPOCHS):
     
     print("Training ...")
     print("Seed used for text generation is: " + generation_phrase)
+    cell_init = np.zeros((BATCH_SIZE, N_HIDDEN))
+    hid_init = np.zeros((BATCH_SIZE, N_HIDDEN))
     p = 0
     try:
         for it in xrange(data_size * num_epochs / BATCH_SIZE):
-            try_it_out() # Generate text using the p^th character as the start. 
+            try_it_out() # Generate text online 
             
             avg_cost = 0;
             for _ in range(PRINT_FREQ):
@@ -233,7 +249,7 @@ def main(num_epochs=NUM_EPOCHS):
                     p = 0;
                 
 
-                avg_cost += train(x, y)
+                avg_cost += train(x, y, cell_init, hid_init, cell_init, hid_init)
             print("Epoch {} average loss = {}".format(it*1.0*PRINT_FREQ/data_size*BATCH_SIZE, avg_cost / PRINT_FREQ))
                     
     except KeyboardInterrupt:
