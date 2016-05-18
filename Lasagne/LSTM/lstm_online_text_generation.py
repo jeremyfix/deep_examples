@@ -123,7 +123,7 @@ def main(num_epochs=NUM_EPOCHS):
     # Recurrent layers expect input of shape
     # (batch size, SEQ_LENGTH, num_features)
 
-    l_in = lasagne.layers.InputLayer(shape=(None, None, vocab_size))
+    l_in = lasagne.layers.InputLayer(shape=(None, None, vocab_size), name="input")
 
     # We now build the LSTM layer which takes l_in as the input layer
     # We clip the gradients at GRAD_CLIP to prevent the problem of exploding gradients. 
@@ -133,27 +133,27 @@ def main(num_epochs=NUM_EPOCHS):
 
     l_forward_1 = lstm.LSTMLayer(
         l_in, N_HIDDEN, grad_clipping=GRAD_CLIP,
-        nonlinearity=lasagne.nonlinearities.tanh, cell_init = cell_init_forward_1, hid_init = hid_init_forward_1)
+        nonlinearity=lasagne.nonlinearities.tanh, cell_init = cell_init_forward_1, hid_init = hid_init_forward_1, name="lstm1")
 
     # The layer is sliced to keep only the hidden activities and discarding the 
     # the cell activities
-    l_forward_1_slice = lasagne.layers.SliceLayer(l_forward_1,1,0)
+    l_forward_1_slice = lasagne.layers.SliceLayer(l_forward_1,1,0,name="lstm1_slice")
 
     cell_init_forward_2 = lasagne.layers.InputLayer(shape=(None, N_HIDDEN), name="cell_init_forward_2")
     hid_init_forward_2 = lasagne.layers.InputLayer(shape=(None, N_HIDDEN), name="hid_init_forward_2")
 
     l_forward_2 = lstm.LSTMLayer(
         l_forward_1_slice, N_HIDDEN, grad_clipping=GRAD_CLIP,
-        nonlinearity=lasagne.nonlinearities.tanh, cell_init = cell_init_forward_2, hid_init = hid_init_forward_2)
+        nonlinearity=lasagne.nonlinearities.tanh, cell_init = cell_init_forward_2, hid_init = hid_init_forward_2, name="lstm2")
 
     # The l_forward layer creates an output of dimension (2, batch_size, SEQ_LENGTH, N_HIDDEN)
     # Since we are only interested in the final prediction of the hidden units, we isolate that quantity and feed it to the next layer. 
     # The output of the sliced layer will then be of size (batch_size, N_HIDDEN)
-    l_forward_2_slice = lasagne.layers.SliceLayer(lasagne.layers.SliceLayer(l_forward_2,1,0), -1, 1)
+    l_forward_2_slice = lasagne.layers.SliceLayer(lasagne.layers.SliceLayer(l_forward_2,1,0), -1, 1, name="lstm2_slice")
 
     # The sliced output is then passed through the softmax nonlinearity to create probability distribution of the prediction
     # The output of this stage is (batch_size, vocab_size)
-    l_out = lasagne.layers.DenseLayer(l_forward_2_slice, num_units=vocab_size, W = lasagne.init.Normal(), nonlinearity=lasagne.nonlinearities.softmax)
+    l_out = lasagne.layers.DenseLayer(l_forward_2_slice, num_units=vocab_size, W = lasagne.init.Normal(), nonlinearity=lasagne.nonlinearities.softmax, name="output")
 
     # Theano tensor for the targets
     target_values = T.ivector('target_output')
