@@ -72,6 +72,13 @@ N_HIDDEN = 128
 # Optimization learning rate
 LEARNING_RATE = .002
 
+# Decay of the learning rate
+LEARNING_RATE_DECAY_RATE = 0.97
+LEARNING_RATE_DECAY_AFTER = 10
+
+# Decay rate of rmsprop
+DECAY_RATE = 0.95
+
 # All gradients above this will be clipped
 GRAD_CLIP = 5
 
@@ -169,8 +176,8 @@ def main(num_epochs=NUM_EPOCHS):
 
     # Compute AdaGrad updates for training
     print("Computing updates ...")
-    #updates = lasagne.updates.adagrad(cost, all_params, LEARNING_RATE)
-    updates = lasagne.updates.rmsprop(cost, all_params, LEARNING_RATE)
+    lr = theano.shared(np.cast['float32'](LEARNING_RATE))
+    updates = lasagne.updates.rmsprop(cost, all_params, learning_rate=lr, rho=DECAY_RATE)
 
     # Theano functions for training and computing cost
     print("Compiling functions ...")
@@ -238,7 +245,11 @@ def main(num_epochs=NUM_EPOCHS):
     try:
         for it in xrange(data_size * num_epochs / BATCH_SIZE):
             try_it_out() # Generate text online 
-            
+        
+	    if((it/data_size * BATCH_SIZE) > LEARNING_RATE_DECAY_AFTER):
+		lr = lr * LEARNING_RATE_DECAY_RATE
+ 		print("Decayed learning rate by a factor of %f to %f " % (LEARNING_RATE_DECAY_RATE, lr))
+    
             avg_cost = 0;
             for _ in range(PRINT_FREQ):
                 x,y = gen_data(p)
