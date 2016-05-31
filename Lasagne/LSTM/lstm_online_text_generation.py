@@ -64,16 +64,16 @@ ix_to_char = { i:ch for i,ch in enumerate(chars) }
 lasagne.random.set_rng(np.random.RandomState(1))
 
 # Sequence Length
-SEQ_LENGTH = 20
+SEQ_LENGTH = 50
 
 # Number of units in the two hidden (LSTM) layers
-N_HIDDEN = 512
+N_HIDDEN = 128
 
 # Optimization learning rate
-LEARNING_RATE = .01
+LEARNING_RATE = .002
 
 # All gradients above this will be clipped
-GRAD_CLIP = 100
+GRAD_CLIP = 5
 
 # How often should we check the output?
 PRINT_FREQ = 1000
@@ -82,7 +82,7 @@ PRINT_FREQ = 1000
 NUM_EPOCHS = 50
 
 # Batch Size
-BATCH_SIZE = 128
+BATCH_SIZE = 50
 
 
 def gen_data(p, batch_size = BATCH_SIZE, data=in_text, return_target=True):
@@ -169,7 +169,8 @@ def main(num_epochs=NUM_EPOCHS):
 
     # Compute AdaGrad updates for training
     print("Computing updates ...")
-    updates = lasagne.updates.adagrad(cost, all_params, LEARNING_RATE)
+    #updates = lasagne.updates.adagrad(cost, all_params, LEARNING_RATE)
+    updates = lasagne.updates.rmsprop(cost, all_params, LEARNING_RATE)
 
     # Theano functions for training and computing cost
     print("Compiling functions ...")
