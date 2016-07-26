@@ -11,10 +11,14 @@ import theano.tensor as T
 
 import numpy as np 
 
-minibatch_size = 50
-nb_training_samples = 10000
+# Leads to 91.5 % test accuracy
+
+minibatch_size = 600
+nb_training_samples = 60000
 nb_test_samples = 10000
-max_epoch = 20
+max_epoch = 80
+momentum = 0.9
+weight_decay = 0.0001
 
 def iterate_minibatches(inputs, targets, batchsize):
     p = np.random.permutation(inputs.shape[0])
@@ -29,7 +33,7 @@ def build_model():
 
 
 print("Loading the data")
-X_train, y_train, X_test, y_test = mnist.load_dataset(nb_training_samples, nb_test_samples)
+X_train, y_train, X_test, y_test = mnist.load_dataset(nb_training_samples, nb_test_samples, False)
 
 print("Building the model")
 input_var, model = build_model()
@@ -40,9 +44,13 @@ target_var = T.ivector('targets')
 loss = lasagne.objectives.categorical_crossentropy(prediction, target_var)
 loss = loss.mean()
 
+l2 = lasagne.regularization.regularize_network_params(model, lasagne.regularization.l2)
+loss += weight_decay * l2
+
 # Define the update of the weights
 params = lasagne.layers.get_all_params(model, trainable=True)
 updates = lasagne.updates.adagrad(loss, params)
+updates = lasagne.updates.apply_momentum(updates, momentum=momentum)
 
 # Define the function to compute the test loss and test accuracy
 accuracy = lasagne.objectives.categorical_accuracy(prediction, target_var)
@@ -77,8 +85,7 @@ for i in range(max_epoch):
 
 print("")
 
-test_accu_arr = np.array(test_accu_arr)
-
+print(" Test accuracy : %f\n" % test_accu_arr[-1])
 
 plt.figure()
 plt.subplot(1,2,1)
