@@ -2,10 +2,6 @@ import sys
 import os
 
 import numpy as np
-import theano
-import theano.tensor as T
-
-import lasagne
 
 ''' 
     Download and loads the mnist dataset
