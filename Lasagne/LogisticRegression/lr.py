@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 
 import sys
 import os
@@ -11,8 +12,8 @@ import theano.tensor as T
 import numpy as np 
 
 minibatch_size = 50
-nb_training_samples = 2000
-nb_test_samples = 1000
+nb_training_samples = 10000
+nb_test_samples = 10000
 max_epoch = 20
 
 def iterate_minibatches(inputs, targets, batchsize):
@@ -44,16 +45,51 @@ params = lasagne.layers.get_all_params(model, trainable=True)
 updates = lasagne.updates.adagrad(loss, params)
 
 # Define the function to compute the test loss and test accuracy
-
+accuracy = lasagne.objectives.categorical_accuracy(prediction, target_var)
+accuracy = accuracy.mean()
 
 print("Compiling the theano function")
 train_fn = theano.function([input_var, target_var], loss, updates=updates)
+accu_fn = theano.function([input_var, target_var], accuracy)
+loss_fn = theano.function([input_var, target_var], loss)
 
 epoch = 0
+
+train_loss_arr = []
+train_accu_arr = []
+test_loss_arr = []
+test_accu_arr = []
+
+train_accu_arr.append(accu_fn(X_test, y_test))
+test_accu_arr.append(accu_fn(X_test, y_test))
+train_loss_arr.append(loss_fn(X_test, y_test))
+test_loss_arr.append(loss_fn(X_test, y_test))
+
 for i in range(max_epoch):
     for Xi, yi in iterate_minibatches(X_train, y_train, minibatch_size):
         sys.stdout.write('\rEpoch : %f ' % epoch)
         train_fn(Xi, yi)
         epoch += 1. / (nb_training_samples/float(minibatch_size))
+    train_accu_arr.append(accu_fn(X_train, y_train))
+    test_accu_arr.append(accu_fn(X_test, y_test))
+    train_loss_arr.append(loss_fn(X_train, y_train))
+    test_loss_arr.append(loss_fn(X_test, y_test))
 
 print("")
+
+test_accu_arr = np.array(test_accu_arr)
+
+
+plt.figure()
+plt.subplot(1,2,1)
+plt.plot(np.arange(max_epoch+1), train_accu_arr, 'b-', label='Train accuracy')
+plt.plot(np.arange(max_epoch+1), test_accu_arr, 'r-', label='Test accuracy')
+plt.legend()
+
+plt.subplot(1,2,2)
+plt.plot(np.arange(max_epoch+1), train_loss_arr, 'b-', label='Train loss')
+plt.plot(np.arange(max_epoch+1), test_loss_arr, 'r-', label='Test loss')
+plt.legend()
+
+plt.show()
+
