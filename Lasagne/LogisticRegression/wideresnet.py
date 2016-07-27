@@ -15,7 +15,7 @@ import numpy as np
 minibatch_size = 600
 nb_training_samples = 60000
 nb_test_samples = 10000
-max_epoch = 80
+max_epoch = 10
 momentum = 0.9
 weight_decay = 0.0001
 
@@ -33,13 +33,14 @@ def build_model(blocks_size):
     l_in = lasagne.layers.InputLayer(shape=(None, 1, 28, 28), input_var=input_var)
     l_prev = l_in
     for k in blocks_size:
-        l_prev = lasagne.layers.Conv2DLayer(l_prev, k, 3, nonlinearity=lasagne.nonlinearities.rectify)
+        l_unit = lasagne.layers.NonlinearityLayer(l_prev, nonlinearity=lasagne.nonlinearities.identity)
+        l_prev = lasagne.layers.Conv2DLayer(l_prev, k, 3, nonlinearity=lasagne.nonlinearities.rectify, pad='same', stride=(1,1))
         n_params += lasagne.layers.count_params(l_prev)
-        l_prev = lasagne.layers.Conv2DLayer(l_prev, k, 3, nonlinearity=lasagne.nonlinearities.linear)
+        l_prev = lasagne.layers.Conv2DLayer(l_prev, k, 3, nonlinearity=lasagne.nonlinearities.identity, pad='same', stride=(1,1))
         n_params += lasagne.layers.count_params(l_prev)
-        #
-        # TODO : add the x in H(x) = x + F(x)
-        #
+        l_prev = lasagne.layers.ConcatLayer([l_unit, l_prev])
+        l_prev = lasagne.layers.NonlinearityLayer(l_prev, nonlinearity=lasagne.nonlinearities.rectify)
+
     l_out = lasagne.layers.DenseLayer(l_prev, num_units=10, nonlinearity=lasagne.nonlinearities.softmax)
     n_params += lasagne.layers.count_params(l_out)
     print("%i parameters to find."% n_params)
@@ -50,7 +51,7 @@ print("Loading the data")
 X_train, y_train, X_test, y_test = mnist.load_dataset(nb_training_samples, nb_test_samples, False)
 
 print("Building the model")
-input_var, model = build_model((3,3))
+input_var, model = build_model((16,))
 prediction = lasagne.layers.get_output(model)
 
 # Define the Negative Log Likelihood loss
