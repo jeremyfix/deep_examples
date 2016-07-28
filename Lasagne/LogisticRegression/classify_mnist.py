@@ -12,6 +12,31 @@ import LogisticRegression
 import numpy as np 
 
 
+import argparse
+description = '''
+This program allows to test different neural network architectures as well as learning algorithms on the MNIST classification problem.\n
+The parameters of the models / learning algorithms must be provided as a comma separated list. Depending on the argument, a different number of parameters must be provided\n
+For example, you can use it calling :\n
+
+    For a logistic regression and a adagrad learning algorithm and a common learning rate of 1e-1\n
+    %s --logreg --adagrad 1e-1
+''' % sys.argv[0]
+parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
+
+modeltype = parser.add_mutually_exclusive_group(required=True)
+modeltype.add_argument('--logreg', action='store_true', help='Logistic regression model')
+modeltype.add_argument('--cnn', type=str, help='Convutional Neural Network model')
+modeltype.add_argument('--vgg', type=str, help='Oxford vision group model')
+
+learning_algo = parser.add_mutually_exclusive_group(required=True)
+learning_algo.add_argument('--sgd', type=str, help='Stochastic gradient descent')
+learning_algo.add_argument('--adagrad', type=str, help='Adaptive gradient')
+
+args = parser.parse_args()
+print(args)
+import sys
+sys.exit()
+
 # Leads to 91.5 % test accuracy
 
 minibatch_size = 600
