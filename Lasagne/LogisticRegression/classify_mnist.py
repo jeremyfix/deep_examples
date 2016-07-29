@@ -13,6 +13,12 @@ import numpy as np
 
 
 import argparse
+
+
+################################################################
+# Argument parsing
+################################################################
+
 description = '''
 This program allows to test different neural network architectures as well as learning algorithms on the MNIST classification problem.\n
 The parameters of the models / learning algorithms must be provided as a comma separated list. Depending on the argument, a different number of parameters must be provided\n
@@ -32,10 +38,43 @@ learning_algo = parser.add_mutually_exclusive_group(required=True)
 learning_algo.add_argument('--sgd', type=str, help='Stochastic gradient descent')
 learning_algo.add_argument('--adagrad', type=str, help='Adaptive gradient')
 
-args = parser.parse_args()
+parser.add_argument('--momentum', type=float, help='Momentum value')
+parser.add_argument('--l2', type=float, help='L2 regularization')
+parser.add_argument('--l1', type=float, help='L1 regularization')
+
+# Parse the arguments and perform some clean up dropping out the None values
+args = {k:v for k, v in vars(parser.parse_args()).iteritems() if v}
 print(args)
-import sys
-sys.exit()
+
+################################################################
+# Print which setup we consider
+################################################################
+
+print("Model architecture : ")
+if('logreg' in args):
+    print("    Logistic regression, Input -> Softmax")
+elif 'cnn' in args:
+    print("    Convolutional neural network with :")
+elif 'vgg' in args:
+    print("    Oxford Visual Geometry Group with :")
+print("")
+print("Learning algorithm :")
+if 'sgd' in args:
+    learning_rate = float(args['sgd'])
+    print("    Stochastic Gradient descent")
+    print("      * Learning rate : %f" % learning_rate)
+elif 'adagrad' in args:
+    print("    Adaptive Gradient descent")
+    print("      * Learning rate : %f" % 0)
+print("")
+print("Regularization :")
+if 'l2' in args:
+    print("    L2 regularization %f" % args['l2'])
+elif 'l1' in args:
+    print("    L1 regularization %f" % args['l1'])
+else:
+    print("    No regularieation")
+
 
 # Leads to 91.5 % test accuracy
 
@@ -54,8 +93,18 @@ def iterate_minibatches(inputs, targets, batchsize):
 print("Loading the data")
 X_train, y_train, X_test, y_test = mnist.load_dataset(nb_training_samples, nb_test_samples, False)
 
+############################################################################
+# Model building
+
 print("Building the model")
-model = LogisticRegression.Model(28, 28, 1, 10)
+
+if 'logreg' in args:
+    model = LogisticRegression.Model(28, 28, 1, 10)
+elif 'cnn' in args:
+    sys.exit()
+elif 'vgg' in args:
+    sys.exit()
+
 input_var, l_out = model.get_input_var(), model.get_output_layer()
 prediction = lasagne.layers.get_output(l_out)
 
