@@ -2,8 +2,10 @@
 # and visualize the learned features
 
 ## TODO :
+# - subsample the training set for finding the architectures which allows overfitting (np.random.choice)
 # - preprocess the input ? no, use batchnorm
 # - visualize the first filters
+# - if batchnorm is used, checkout its parameters
 # - visualize the activation of the units function of the image index
 # - export the model size
 # - perform a t-SNE on the activations
