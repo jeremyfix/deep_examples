@@ -99,7 +99,6 @@ hist = model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
 print(hist.history)
 
 model.save('my_model.h5')  # creates a HDF5 file 'my_model.h5'
-del model  # deletes the existing model
 
 #### Evaluating the network
 score = model.evaluate(X_test, Y_test, verbose=0)
