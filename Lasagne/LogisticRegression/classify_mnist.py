@@ -41,6 +41,7 @@ modeltype.add_argument('--vgg', type=str, help='Oxford vision group model')
 learning_algo = parser.add_mutually_exclusive_group(required=True)
 learning_algo.add_argument('--sgd', type=str, help='Stochastic gradient descent')
 learning_algo.add_argument('--adagrad', type=str, help='Adaptive gradient')
+learning_algo.add_argument('--rmsprop', type=str, help='RMSprop')
 
 parser.add_argument('--momentum', type=float, help='Momentum value')
 parser.add_argument('--nesterov_momentum', type=float, help='Nesterov momentum value')
@@ -71,17 +72,22 @@ X_train, y_train, X_test, y_test = mnist.load_dataset(args['nbtrain'], args['nbt
 # Model building
 
 print("Model architecture : ")
+filename_prefix = ""
 if('logreg' in args):
     print("    Logistic regression, Input -> Softmax")
     model = LogisticRegression.Model(28, 28, 1, 10)
-elif 'mpl' in args:
+    filename_prefix += "logreg_"
+elif 'mlp' in args:
     print("    Multilayer perceptron with : ")
+    filename_prefix += "mlp_"
     sys.exit()
 elif 'cnn' in args:
     print("    Convolutional neural network with :")
+    filename_prefix += "cnn_"
     sys.exit()
 elif 'vgg' in args:
     print("    Oxford Visual Geometry Group with :")
+    filename_prefix += "vgg_"
     sys.exit()
 else:
     sys.exit()
@@ -100,10 +106,14 @@ if 'l2' in args:
     print("    L2 regularization of lambda = %f" % args['l2'])
     l2 = lasagne.regularization.regularize_network_params(l_out, lasagne.regularization.l2)
     loss += args['l2'] * l2
+    filename_prefix += "l2_%f" % args['l2']
 elif 'l1' in args:
     print("    L1 regularization of lambda = %f " % args['l1'])
     l1 = lasagne.regularization.regularize_network_params(l_out, lasagne.regularization.l1)
     loss += args['l1'] * l1
+    filename_prefix += "l1_%f" % args['l1']
+else:
+    print("    No regularizatiion")
 
 # Define the update of the weights
 params = lasagne.layers.get_all_params(l_out, trainable=True)
@@ -114,6 +124,7 @@ if 'sgd' in args:
     print("    Stochastic Gradient descent")
     print("      * Learning rate : %f" % learning_rate)
     updates = lasagne.updates.sgd(loss, params, learning_rate)
+    filename_prefix += "sgd_lr%f_" % learning_rate
 elif 'adagrad' in args:
     learning_rate = float(args['adagrad'])
     print("    Adaptive Gradient descent")
@@ -122,26 +133,30 @@ elif 'adagrad' in args:
     if(momentum in args):
         momentum = args['momentum']
     print("      * Momentum : %f " % momentum)
-    updates = lasagne.updates.adagrad(loss, params, learning_rate, 0.9)
+    updates = lasagne.updates.adagrad(loss, params, learning_rate, momentum)
+    filename_prefix += "adagrad_lr%f_m%f_" % (learning_rate,momentum)
+elif 'rmsprop' in args:
+    learning_rate, rho, epsilon = map(float, args['rmsprop'].split(','))
+    print("    RMS prop : ")
+    print("      * Learning rate : %f" % learning_rate)
+    print("      * rho           : %f" % rho)
+    print("      * epsilon       : %f" % epsilon)
+    updates = lasagne.updates.rmsprop(loss, params, learning_rate, rho, epsilon)
+    filename_prefix += "rmsprop_lr%f_rho%f_eps%f_" % (learning_rate, rho, epsilon)
 print("")
 
-
-print("Regularization :")
-if 'l2' in args:
-    print("    L2 regularization %f" % args['l2'])
-elif 'l1' in args:
-    print("    L1 regularization %f" % args['l1'])
-else:
-    print("    No regularization")
 
 # Momentum ?
 if 'momentum' in args and not 'adagrad' in args:
     print("Applying a momentum of %f " % args['momentum'])
     updates = lasagne.updates.apply_momentum(updates, momentum=args['momentum'])
+    filename_prefix += "m%f_" % args['momentum']
 elif 'nesterov_momentum' in args and not 'adagrad' in args:
     print("Applying a Nesterov momentum of %f " % args['nesterov_momentum'])
     updates = lasagne.updates.apply_nesterov_momentum(updates, momentum=args['nesterov_momentum'])
+    filename_prefix += "nm%f_" % args['nesterov_momentum']
 
+print("\n Filename prefix : %s " % filename_prefix)
 print("\n  ==>  I have %i parametes to update  <== \n" % lasagne.layers.count_params(l_out))
 
 # Define the function to compute the test loss and test accuracy
@@ -154,41 +169,22 @@ accu_fn = theano.function([input_var, target_var], accuracy)
 loss_fn = theano.function([input_var, target_var], loss)
 
 epoch = 0
+train_accu, test_accu = 0, 0
 
-train_loss_arr = []
-train_accu_arr = []
-test_loss_arr = []
-test_accu_arr = []
-
-train_accu_arr.append(accu_fn(X_test, y_test))
-test_accu_arr.append(accu_fn(X_test, y_test))
-train_loss_arr.append(loss_fn(X_test, y_test))
-test_loss_arr.append(loss_fn(X_test, y_test))
-
+file_loss_acc = open("%s.data" % filename_prefix, 'w', 0) # unbuffered
 for i in range(args['epoch']):
     for Xi, yi in iterate_minibatches(X_train, y_train, args['batchsize']):
         sys.stdout.write('\rEpoch : %f ' % epoch)
         train_fn(Xi, yi)
         epoch += 1. / (args['nbtrain']/float(args['batchsize']))
-    train_accu_arr.append(accu_fn(X_train, y_train))
-    test_accu_arr.append(accu_fn(X_test, y_test))
-    train_loss_arr.append(loss_fn(X_train, y_train))
-    test_loss_arr.append(loss_fn(X_test, y_test))
+    train_accu = accu_fn(X_train, y_train)
+    test_accu = accu_fn(X_test, y_test)
+    train_loss = loss_fn(X_train, y_train)
+    test_loss = loss_fn(X_test, y_test)
+    file_loss_acc.write("%i %f %f %f %f\n" % (epoch, train_loss, train_accu, test_loss, test_accu))
+file_loss_acc.close()
 
-print("")
 
-print(" Test accuracy : %f\n" % test_accu_arr[-1])
-
-plt.figure()
-plt.subplot(1,2,1)
-plt.plot(np.arange(args['epoch']+1), train_accu_arr, 'b-', label='Train accuracy')
-plt.plot(np.arange(args['epoch']+1), test_accu_arr, 'r-', label='Test accuracy')
-plt.legend()
-
-plt.subplot(1,2,2)
-plt.plot(np.arange(args['epoch']+1), train_loss_arr, 'b-', label='Train loss')
-plt.plot(np.arange(args['epoch']+1), test_loss_arr, 'r-', label='Test loss')
-plt.legend()
-
-plt.show()
+print(" Train accuracy : %f\n" % train_accu)
+print(" Test accuracy : %f\n" % test_accu)
 

@@ -7,6 +7,7 @@
 # - visualize the activation of the units function of the image index
 # - export the model size
 # - perform a t-SNE on the activations
+# - deconvolution of the hidden layer units ? what is the input that will maximally activate a hidden unit ?
 
 
 from keras.datasets import mnist
@@ -81,7 +82,8 @@ def build_network(cnn_layer_sizes, fc_layer_sizes):
 
 #### Building the network
 
-model = build_network([32, 16],[100, num_classes])
+model = build_network([32, 16],[50, num_classes])
+model.summary()
 
 model.compile(loss='categorical_crossentropy',
               optimizer='adam',
