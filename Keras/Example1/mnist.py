@@ -3,7 +3,10 @@
 
 ## TODO :
 # - preprocess the input ? no, use batchnorm
-# - 
+# - visualize the first filters
+# - visualize the activation of the units function of the image index
+# - export the model size
+# - perform a t-SNE on the activations
 
 
 from keras.datasets import mnist
@@ -78,7 +81,7 @@ def build_network(cnn_layer_sizes, fc_layer_sizes):
 
 #### Building the network
 
-model = build_network([16, 16],[50, 25, num_classes])
+model = build_network([32, 16],[100, num_classes])
 
 model.compile(loss='categorical_crossentropy',
               optimizer='adam',
@@ -86,9 +89,13 @@ model.compile(loss='categorical_crossentropy',
 
 #### Fitting the network
 batch_size = 32
-nb_epoch = 20
-model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
-          verbose=1, validation_data=(X_test, Y_test))
+nb_epoch = 2
+hist = model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
+                 verbose=1, validation_data=(X_test, Y_test))
+print(hist.history)
+
+model.save('my_model.h5')  # creates a HDF5 file 'my_model.h5'
+del model  # deletes the existing model
 
 #### Evaluating the network
 score = model.evaluate(X_test, Y_test, verbose=0)
