@@ -67,13 +67,13 @@ def build_network(cnn_layer_sizes, fc_layer_sizes):
     model.add(Activation('relu'))
     model.add(MaxPooling2D(pool_size=(2, 2), strides=None, border_mode='valid'))
     for s in cnn_layer_sizes[1:]:
-        model.add(BatchNormalization())
+		#model.add(BatchNormalization())
         model.add(Convolution2D(s, 3, 3, border_mode='same'))
         model.add(Activation('relu'))
         model.add(MaxPooling2D(pool_size=(2, 2), strides=None, border_mode='valid'))
     model.add(Flatten())
     for k, s in enumerate(fc_layer_sizes):
-        model.add(BatchNormalization())
+		#model.add(BatchNormalization())
         model.add(Dense(s))
         if(k == (len(fc_layer_sizes)-1)):
             model.add(Activation('softmax'))
@@ -93,7 +93,7 @@ model.compile(loss='categorical_crossentropy',
 
 #### Fitting the network
 batch_size = 32
-nb_epoch = 2
+nb_epoch = 100
 hist = model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
                  verbose=1, validation_data=(X_test, Y_test))
 print(hist.history)
