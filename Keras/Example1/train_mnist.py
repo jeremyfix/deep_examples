@@ -51,25 +51,27 @@ def build_network(input_shape):
     The output is a softmax, the loss is the cross-entropy
     '''
     init_conv = 'glorot_uniform'
+    filter_shape = (7, 7)
+
     model = Sequential()
-    model.add(Convolution2D(32, 3, 3, init=init_conv, border_mode='same', input_shape=input_shape))
+        
+    model.add(Convolution2D(32, filter_shape[0], filter_shape[1], init=init_conv, border_mode='same', input_shape=input_shape, name='conv1'))
     model.add(Activation('relu'))
-    model.add(Convolution2D(32, 3, 3, init=init_conv, border_mode='same'))
+    model.add(Convolution2D(32, filter_shape[0], filter_shape[1], init=init_conv, border_mode='same', name='conv2'))
     model.add(Activation('relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2), strides=None, border_mode='valid'))
+    model.add(MaxPooling2D(pool_size=(2, 2), strides=None, border_mode='valid', name='max1'))
     
-    model.add(Convolution2D(16, 3, 3, init=init_conv, border_mode='same'))
+    model.add(Convolution2D(16, filter_shape[0], filter_shape[1], init=init_conv, border_mode='same', name='conv3'))
     model.add(Activation('relu'))
-    model.add(Convolution2D(16, 3, 3, init=init_conv, border_mode='same'))
+    model.add(Convolution2D(16, filter_shape[0], filter_shape[1], init=init_conv, border_mode='same', name='conv4'))
     model.add(Activation('relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2), strides=None, border_mode='valid'))
+    model.add(MaxPooling2D(pool_size=(2, 2), strides=None, border_mode='valid', name='max2'))
     
     model.add(GlobalAveragePooling2D())
-    #model.add(Flatten())
     
-    model.add(Dense(128))
+    model.add(Dense(128, name="d1"))
     model.add(Activation('relu'))
-    model.add(Dense(64))
+    model.add(Dense(64, name="d2"))
     model.add(Activation('relu'))
     model.add(Dense(10))
     model.add(Activation('softmax'))
