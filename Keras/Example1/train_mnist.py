@@ -90,24 +90,18 @@ def build_res_network(input_shape):
     filter_shape = (3, 3)
 
     input = Input(shape=input_shape)
-
-    
-
-    l1 = input
+    K = 64
+    l1 = Convolution2D(K, filter_shape[0], filter_shape[1], init=init_conv, border_mode='same', input_shape=input_shape, name='conv0')(input)
     l2 = None
-    Ksize = (32, 16)
-    for i, K in enumerate(Ksize):
-        l2 = Convolution2D(K, filter_shape[0], filter_shape[1], init=init_conv, border_mode='same', input_shape=input_shape, name='conv%i_1'%i)(l1)
+    
+    for i in range(2):
+        l2 = Convolution2D(int(K/2), 1, 1, init=init_conv, border_mode='same', name='conv%i_1'%i)(l1)
         l2  = Activation('relu')(l2)
-        l2 = Convolution2D(K, filter_shape[0], filter_shape[1], init=init_conv, border_mode='same', name='conv%i_2'%i)(l2)
+        l2 = Convolution2D(int(K/2), filter_shape[0], filter_shape[1], init=init_conv, border_mode='same', name='conv%i_1'%i)(l1)
+        l2  = Activation('relu')(l2)
+        l2 = Convolution2D(K, 1, 1, init=init_conv, border_mode='same', name='conv%i_2'%i)(l2)
         l2 = Activation('relu')(l2)
-        l2 = MaxPooling2D(pool_size=(2, 2), strides=None, border_mode='valid', name='max%i'%i)(l2)
-        
-        # Handle the shortcut.
-        # We need to add layers for expanding the number of channels of
-        # the input of the block
-        l1 = MaxPooling2D(pool_size=(2,2), strides=None, border_mode='valid')(l1)
-        l1 = Convolution2D(K, 1, 1, border_mode='valid')(l1)
+        print("merge")
         l1 = merge([l1, l2], mode="sum")
 
 
@@ -115,10 +109,6 @@ def build_res_network(input_shape):
     
     l1 = GlobalAveragePooling2D()(l1)
     
-    l1 = Dense(128, name="d1")(l1)
-    l1 = Activation('relu')(l1)
-    l1 = Dense(64, name="d2")(l1)
-    l1 = Activation('relu')(l1)
     l1 = Dense(10)(l1)
     l1 = Activation('softmax')(l1)
 
@@ -138,7 +128,7 @@ model.compile(loss='categorical_crossentropy',
 
 #### Fitting the network
 batch_size = 32
-nb_epoch = 5
+nb_epoch = 100
 hist = model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
                  verbose=1, validation_data=(X_test, Y_test))
 print(hist.history)
