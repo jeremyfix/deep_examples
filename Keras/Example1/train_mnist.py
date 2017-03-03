@@ -3,7 +3,8 @@
 
 from keras.datasets import mnist
 from keras.models import Sequential
-from keras.layers import Dense, Activation, Flatten, Input
+from keras.models import Model
+from keras.layers import Dense, Activation, Flatten, Input, merge
 from keras.layers.convolutional import Convolution2D
 from keras.layers.pooling import MaxPooling2D, GlobalAveragePooling2D
 from keras.layers.normalization import BatchNormalization
@@ -51,7 +52,7 @@ def build_network(input_shape):
     The output is a softmax, the loss is the cross-entropy
     '''
     init_conv = 'glorot_uniform'
-    filter_shape = (7, 7)
+    filter_shape = (3, 3)
 
     model = Sequential()
         
@@ -78,10 +79,51 @@ def build_network(input_shape):
 
     return model
 
+def build_res_network(input_shape):
+    '''The network is built from
+    a stack of convolutive - max pooling layers
+    some split and fusion are operated over each conv conv pool blocks
+    followed by fully connected layers
+    The output is a softmax, the loss is the cross-entropy
+    '''
+    init_conv = 'glorot_uniform'
+    filter_shape = (3, 3)
+
+    input = Input(shape=input_shape)
+
+    K = 32
+
+    l1 = input
+    l2 = Convolution2D(K, filter_shape[0], filter_shape[1], init=init_conv, border_mode='same', input_shape=input_shape, name='conv1')(l1)
+    l2  = Activation('relu')(l2)
+    l2 = Convolution2D(K, filter_shape[0], filter_shape[1], init=init_conv, border_mode='same', name='conv2')(l2)
+    l2 = Activation('relu')(l2)
+    l2 = MaxPooling2D(pool_size=(2, 2), strides=None, border_mode='valid', name='max1')(l2)
+
+    # Handle the shortcut.
+    # We need to add layers for expanding the number of channels of
+    # the input of the block
+    l1 = MaxPooling2D(pool_size=(2,2), strides=None, border_mode='valid')(l1)
+    l1 = Convolution2D(K, 1, 1, border_mode='valid')(l1)
+    l1 = merge([l1, l2], mode="sum")
+
+    l1 = GlobalAveragePooling2D()(l1)
+    
+    l1 = Dense(128, name="d1")(l1)
+    l1 = Activation('relu')(l1)
+    l1 = Dense(64, name="d2")(l1)
+    l1 = Activation('relu')(l1)
+    l1 = Dense(10)(l1)
+    l1 = Activation('softmax')(l1)
+
+    output = l1
+    
+    model = Model(input=input, output=output)
+    return model
 
 #### Building the network
 
-model = build_network(input_shape)
+model = build_res_network(input_shape)
 model.summary()
 
 model.compile(loss='categorical_crossentropy',
