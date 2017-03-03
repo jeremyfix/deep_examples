@@ -1,17 +1,6 @@
 # In this script we train a simple CNN network
 # and visualize the learned features
 
-## TODO :
-# - subsample the training set for finding the architectures which allows overfitting (np.random.choice)
-# - preprocess the input ? no, use batchnorm
-# - visualize the first filters
-# - if batchnorm is used, checkout its parameters
-# - visualize the activation of the units function of the image index
-# - export the model size
-# - perform a t-SNE on the activations
-# - deconvolution of the hidden layer units ? what is the input that will maximally activate a hidden unit ?
-
-
 from keras.datasets import mnist
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Flatten, Input
@@ -55,36 +44,39 @@ Y_test = np_utils.to_categorical(y_test, num_classes)
 ###### Definition of the network
 
 
-def build_network(cnn_layer_sizes, fc_layer_sizes):
+def build_network(input_shape):
     '''The network is built from
     a stack of convolutive - max pooling layers
     followed by fully connected layers
     The output is a softmax, the loss is the cross-entropy
     '''
     model = Sequential()
-    model.add(BatchNormalization(input_shape=input_shape))
-    model.add(Convolution2D(cnn_layer_sizes[0], 3, 3, border_mode='same'))
+    model.add(Convolution2D(32, 3, 3, init='he_normal', border_mode='same', input_shape=input_shape))
+    model.add(Activation('relu'))
+    model.add(Convolution2D(32, 3, 3, init='he_normal', border_mode='same'))
     model.add(Activation('relu'))
     model.add(MaxPooling2D(pool_size=(2, 2), strides=None, border_mode='valid'))
-    for s in cnn_layer_sizes[1:]:
-		#model.add(BatchNormalization())
-        model.add(Convolution2D(s, 3, 3, border_mode='same'))
-        model.add(Activation('relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2), strides=None, border_mode='valid'))
+    
+    model.add(Convolution2D(16, 3, 3, init='he_normal', border_mode='same'))
+    model.add(Activation('relu'))
+    model.add(Convolution2D(16, 3, 3, init='he_normal', border_mode='same'))
+    model.add(Activation('relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2), strides=None, border_mode='valid'))
+    
+    
     model.add(Flatten())
-    for k, s in enumerate(fc_layer_sizes):
-		#model.add(BatchNormalization())
-        model.add(Dense(s))
-        if(k == (len(fc_layer_sizes)-1)):
-            model.add(Activation('softmax'))
-        else:
-            model.add(Activation('relu'))
+    
+    model.add(Dense(32))
+    model.add(Activation('relu'))
+    model.add(Dense(10))
+    model.add(Activation('softmax'))
+
     return model
 
 
 #### Building the network
 
-model = build_network([32, 16],[50, num_classes])
+model = build_network(input_shape)
 model.summary()
 
 model.compile(loss='categorical_crossentropy',
