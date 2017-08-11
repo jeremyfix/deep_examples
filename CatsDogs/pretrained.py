@@ -18,15 +18,18 @@ from keras.models import Model
 import glob
 
 datapath_train = os.path.join(*["data","sample","train"])
-nb_training_data = len(glob.glob(os.path.join(datapath_train, "*/*.jpg")))
 datapath_valid = os.path.join(*["data","sample", "valid"])
-nb_validation_data = len(glob.glob(os.path.join(datapath_train, "*/*.jpg")))
+
 
 #datapath_train = os.path.join(*["data","train"])
 #datapath_valid = os.path.join(*["data","valid"])
 datapath_test = os.path.join(*["data","test"])
 
+nb_training_data = len(glob.glob(os.path.join(datapath_train, "*/*.jpg")))
+nb_validation_data = len(glob.glob(os.path.join(datapath_valid, "*/*.jpg")))
+nb_test_data = len(glob.glob(os.path.join(datapath_test, "*.jpg")))
 img_size = (224, 224)
+batch_size=32
 
 #train_datagen = ImageDataGenerator(featurewise_std_normalization=True)
 # Requires to be fitted to the data, and may need a fit_from_directory function. It also depends on what the pretrained networks expect from their input. 
@@ -46,17 +49,18 @@ valid_datagen = ImageDataGenerator(rescale=1./255.)
 
 train_generator = train_datagen.flow_from_directory(datapath_train,
                                                     class_mode="binary",
-                                                    batch_size=32,
+                                                    batch_size=batch_size,
                                                     target_size=img_size)
 valid_generator = valid_datagen.flow_from_directory(datapath_valid,
                                                     class_mode='binary',
-                                                    batch_size=32,
+                                                    batch_size=batch_size,
                                                     target_size=img_size)
 
 # Get our pretrained model
 loaded_model = VGG16(input_shape=img_size+(3,),
                      include_top=False, weights='imagenet')
-
+for layer in loaded_model.layers:
+    layer.trainable = False
 # Cut off the head and stack a bi-class classification layer
 flat = Flatten()(loaded_model.output)
 preds = Dense(1, activation='sigmoid')(flat)
@@ -66,9 +70,10 @@ model.summary()
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
 # Fit the pretrained model
-model.fit_generator(train_generator, nb_training_data,
+model.fit_generator(train_generator,
+                    steps_per_epoch=nb_training_data//batch_size,
                     epochs=2,
-                    validation_data=valid_generator, validation_steps=nb_validation_data,
+                    validation_data=valid_generator, validation_steps=nb_validation_data//batch_size,
                     verbose=2)
 
 # Generate the class probabilities for all the test images
