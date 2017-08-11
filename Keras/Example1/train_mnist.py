@@ -11,6 +11,8 @@ from keras.layers.normalization import BatchNormalization
 from keras import backend as K
 from keras.utils import np_utils
 
+import resnet
+
 ###### Some info about the Keras config
 if K.image_dim_ordering() == 'th':
     print("Using the theano dim ordering")
@@ -37,6 +39,9 @@ else:
     X_test = X_test.reshape(X_test.shape[0], img_rows, img_cols, 1)
     input_shape = (img_rows, img_cols, 1)
 
+X_train = X_train.reshape(X_train.shape[0], img_rows, img_cols, 1)
+X_test = X_test.reshape(X_test.shape[0], img_rows, img_cols, 1)
+input_shape = (1, img_rows, img_cols)
 
 # convert class vectors to binary class matrices
 Y_train = np_utils.to_categorical(y_train, num_classes)
@@ -119,7 +124,8 @@ def build_res_network(input_shape):
 
 #### Building the network
 
-model = build_res_network(input_shape)
+#model = build_res_network(input_shape)
+model = resnet.ResnetBuilder.build_resnet_18(input_shape, 10)
 model.summary()
 
 model.compile(loss='categorical_crossentropy',
@@ -131,7 +137,11 @@ batch_size = 32
 nb_epoch = 100
 hist = model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
                  verbose=1, validation_data=(X_test, Y_test))
-print(hist.history)
+
+import pickle
+fh = open('history.pkl', 'wb')
+pickle.dump(hist.history, fh)
+fh.close()
 
 model.save('my_model.h5')  # creates a HDF5 file 'my_model.h5'
 

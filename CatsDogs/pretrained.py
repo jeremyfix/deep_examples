@@ -15,6 +15,7 @@ from keras.preprocessing.image import ImageDataGenerator, img_to_array, load_img
 from keras.applications.vgg16 import VGG16
 from keras.layers import Dense, Flatten
 from keras.models import Model
+from keras.layers import Dropout
 import glob
 
 datapath_train = os.path.join(*["data","sample","train"])
@@ -58,12 +59,15 @@ valid_generator = valid_datagen.flow_from_directory(datapath_valid,
 
 # Get our pretrained model
 loaded_model = VGG16(input_shape=img_size+(3,),
-                     include_top=False, weights='imagenet')
+                     include_top=True, weights='imagenet')
 for layer in loaded_model.layers:
     layer.trainable = False
 # Cut off the head and stack a bi-class classification layer
-flat = Flatten()(loaded_model.output)
-preds = Dense(1, activation='sigmoid')(flat)
+#flat = Flatten()(loaded_model.output)
+#drop = Dropout(0.3)(flat)
+loaded_model.layers.pop() # Remove the last classification layer
+last = loaded_model.layers[-1].output
+preds = Dense(1, activation='sigmoid')(last)
 model = Model(input=loaded_model.input, output=preds)
 model.summary()
 
@@ -72,9 +76,9 @@ model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy']
 # Fit the pretrained model
 model.fit_generator(train_generator,
                     steps_per_epoch=nb_training_data//batch_size,
-                    epochs=2,
+                    epochs=20,
                     validation_data=valid_generator, validation_steps=nb_validation_data//batch_size,
-                    verbose=2)
+                    verbose=1)
 
 # Generate the class probabilities for all the test images
 # model.predict_generator()
