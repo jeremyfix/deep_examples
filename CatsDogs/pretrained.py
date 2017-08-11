@@ -23,12 +23,12 @@ import glob
 import h5py
 import numpy as np 
 
-datapath_train = os.path.join(*["data","sample","train"])
-datapath_valid = os.path.join(*["data","sample", "valid"])
+#datapath_train = os.path.join(*["data","sample","train"])
+#datapath_valid = os.path.join(*["data","sample", "valid"])
 
+datapath_train = os.path.join(*["data","train"])
+datapath_valid = os.path.join(*["data","valid"])
 
-#datapath_train = os.path.join(*["data","train"])
-#datapath_valid = os.path.join(*["data","valid"])
 datapath_test = os.path.join(*["data","test"])
 
 nb_training_data = len(glob.glob(os.path.join(datapath_train, "*/*.jpg")))
@@ -36,7 +36,7 @@ nb_validation_data = len(glob.glob(os.path.join(datapath_valid, "*/*.jpg")))
 nb_testing_data = len(glob.glob(os.path.join(datapath_test, "*/*.jpg")))
 img_size = (224, 224)
 batch_size=16
-nb_epochs = 10
+nb_epochs = 20
 
 
 #train_datagen = ImageDataGenerator(featurewise_std_normalization=True)
@@ -73,6 +73,8 @@ test_generator = valid_datagen.flow_from_directory(datapath_test,
 # Get our pretrained model
 loaded_model = VGG16(input_shape=img_size+(3,),
                      include_top=True, weights='imagenet')
+# Disable training of the layers up to the last FC bottleneck features
+# i.e. we allow training only of the last FC layers
 for layer in loaded_model.layers[:-3]:
     layer.trainable = False
 # Cut off the head and stack a bi-class classification layer
@@ -89,6 +91,7 @@ checkpoint_cb = ModelCheckpoint("best_model.h5", save_best_only=True)
 
 
 # Fit the pretrained model
+print("Training")
 model.fit_generator(train_generator,
                     steps_per_epoch=nb_training_data//batch_size,
                     epochs=nb_epochs,
@@ -104,6 +107,7 @@ with h5py.File("best_model.h5", 'a') as f:
 
 model = load_model("best_model.h5")
 
+print("Testing")
 pred = model.predict_generator(test_generator,
 		steps=nb_testing_data).ravel().tolist()
 
@@ -113,17 +117,10 @@ submission[:,0] = list(map(lambda fname: int(os.path.basename(fname).split('.')[
 submission[:,1] = pred
 
 # That we need to sort by image id
-submission[submission[:,0].argsort()]
-print(submission)
+submission = submission[submission[:,0].argsort()]
 
-
-#print(test_generator.filenames)
-#print(pred)
-#for i in range(nb_testing_data):
-#	img = next(test_generator)[0]
-#	pred = model.predict(img)[0][0]
-#	print(test_generator.filenames[i], pred)
 fh = open('submission.csv','w')
-fh.write('id,label')
-
+fh.write('id,label\n')
+for l in submission:
+	fh.write('%i,%f\n'%(l[0], l[1]))
 fh.close()
