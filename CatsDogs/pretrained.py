@@ -38,7 +38,6 @@ img_size = (224, 224)
 batch_size=16
 nb_epochs = 20
 
-
 #train_datagen = ImageDataGenerator(featurewise_std_normalization=True)
 # Requires to be fitted to the data, and may need a fit_from_directory function. It also depends on what the pretrained networks expect from their input. 
 train_datagen = ImageDataGenerator(rescale=1./255.)
