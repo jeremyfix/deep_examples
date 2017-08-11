@@ -39,7 +39,7 @@ if os.path.isdir(dest_data_path):
 os.mkdir(dest_data_path)
 
 print("Copying the test data")
-shutil.copytree("{}/test".format(raw_data_path), "{}/test".format(dest_data_path))
+shutil.copytree("{}/test".format(raw_data_path), "{}/test/images".format(dest_data_path))
 
 print("Splitting the data into data/train, data/val")
 

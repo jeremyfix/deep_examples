@@ -16,7 +16,12 @@ from keras.applications.vgg16 import VGG16
 from keras.layers import Dense, Flatten
 from keras.models import Model
 from keras.layers import Dropout
+from keras.utils.data_utils import get_file
+from keras.callbacks import ModelCheckpoint
+from keras.models import load_model
 import glob
+import h5py
+import numpy as np 
 
 datapath_train = os.path.join(*["data","sample","train"])
 datapath_valid = os.path.join(*["data","sample", "valid"])
@@ -28,9 +33,11 @@ datapath_test = os.path.join(*["data","test"])
 
 nb_training_data = len(glob.glob(os.path.join(datapath_train, "*/*.jpg")))
 nb_validation_data = len(glob.glob(os.path.join(datapath_valid, "*/*.jpg")))
-nb_test_data = len(glob.glob(os.path.join(datapath_test, "*.jpg")))
+nb_testing_data = len(glob.glob(os.path.join(datapath_test, "*/*.jpg")))
 img_size = (224, 224)
-batch_size=32
+batch_size=16
+nb_epochs = 10
+
 
 #train_datagen = ImageDataGenerator(featurewise_std_normalization=True)
 # Requires to be fitted to the data, and may need a fit_from_directory function. It also depends on what the pretrained networks expect from their input. 
@@ -55,16 +62,20 @@ train_generator = train_datagen.flow_from_directory(datapath_train,
 valid_generator = valid_datagen.flow_from_directory(datapath_valid,
                                                     class_mode='binary',
                                                     batch_size=batch_size,
-                                                    target_size=img_size)
+                                                    target_size=img_size,
+													shuffle=False)
+test_generator = valid_datagen.flow_from_directory(datapath_test,
+                                                    batch_size=1,
+                                                    target_size=img_size,
+													shuffle=False)
+
 
 # Get our pretrained model
 loaded_model = VGG16(input_shape=img_size+(3,),
                      include_top=True, weights='imagenet')
-for layer in loaded_model.layers:
+for layer in loaded_model.layers[:-3]:
     layer.trainable = False
 # Cut off the head and stack a bi-class classification layer
-#flat = Flatten()(loaded_model.output)
-#drop = Dropout(0.3)(flat)
 loaded_model.layers.pop() # Remove the last classification layer
 last = loaded_model.layers[-1].output
 preds = Dense(1, activation='sigmoid')(last)
@@ -73,16 +84,45 @@ model.summary()
 
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
+# Callbacks
+checkpoint_cb = ModelCheckpoint("best_model.h5", save_best_only=True)
+
+
 # Fit the pretrained model
 model.fit_generator(train_generator,
                     steps_per_epoch=nb_training_data//batch_size,
-                    epochs=20,
+                    epochs=nb_epochs,
                     validation_data=valid_generator, validation_steps=nb_validation_data//batch_size,
-                    verbose=1)
+                    verbose=1,
+					callbacks=[checkpoint_cb])
 
 # Generate the class probabilities for all the test images
-# model.predict_generator()
 
+with h5py.File("best_model.h5", 'a') as f:
+    if 'optimizer_weights' in f.keys():
+		        del f['optimizer_weights']
+
+model = load_model("best_model.h5")
+
+pred = model.predict_generator(test_generator,
+		steps=nb_testing_data).ravel().tolist()
+
+# We fill in a submission array with the results
+submission = np.zeros((nb_testing_data, 2))
+submission[:,0] = list(map(lambda fname: int(os.path.basename(fname).split('.')[0]), test_generator.filenames))
+submission[:,1] = pred
+
+# That we need to sort by image id
+submission[submission[:,0].argsort()]
+print(submission)
+
+
+#print(test_generator.filenames)
+#print(pred)
+#for i in range(nb_testing_data):
+#	img = next(test_generator)[0]
+#	pred = model.predict(img)[0][0]
+#	print(test_generator.filenames[i], pred)
 fh = open('submission.csv','w')
 fh.write('id,label')
 
