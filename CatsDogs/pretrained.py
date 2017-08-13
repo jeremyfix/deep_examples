@@ -36,7 +36,7 @@ nb_training_data = len(glob.glob(os.path.join(datapath_train, "*/*.jpg")))
 nb_validation_data = len(glob.glob(os.path.join(datapath_valid, "*/*.jpg")))
 nb_testing_data = len(glob.glob(os.path.join(datapath_test, "*/*.jpg")))
 img_size = (224, 224)
-batch_size=16
+batch_size = 16
 nb_epochs = 20
 
 vgg_mean = np.array([123.68, 116.779, 103.939], dtype=np.float32).reshape((1,1,3))
@@ -68,11 +68,11 @@ valid_generator = valid_datagen.flow_from_directory(datapath_valid,
                                                     class_mode='binary',
                                                     batch_size=batch_size,
                                                     target_size=img_size,
-													shuffle=False)
+						    shuffle=False)
 test_generator = valid_datagen.flow_from_directory(datapath_test,
-                                                    batch_size=1,
-                                                    target_size=img_size,
-													shuffle=False)
+                                                   batch_size=1,
+                                                   target_size=img_size,
+						   shuffle=False)
 
 
 # Get our pretrained model
@@ -81,7 +81,7 @@ loaded_model = VGG16(input_shape=img_size+(3,),
 # Disable training of the layers up to the last FC bottleneck features
 # i.e. we allow training only of the last FC layers
 for layer in loaded_model.layers[:-3]:
-    layer.trainable = False
+        layer.trainable = False
 # Cut off the head and stack a bi-class classification layer
 loaded_model.layers.pop() # Remove the last classification layer
 last = loaded_model.layers[-1].output
@@ -109,13 +109,13 @@ model.fit_generator(train_generator,
 
 with h5py.File("best_model.h5", 'a') as f:
     if 'optimizer_weights' in f.keys():
-		        del f['optimizer_weights']
+	    del f['optimizer_weights']
 
 model = load_model("best_model.h5")
 
 print("Testing")
 pred = model.predict_generator(test_generator,
-		steps=nb_testing_data).ravel().tolist()
+		               steps=nb_testing_data).ravel().tolist()
 
 # We fill in a submission array with the results
 submission = np.zeros((nb_testing_data, 2))
@@ -129,4 +129,4 @@ fh = open('submission.csv','w')
 fh.write('id,label\n')
 for l in submission:
 	fh.write('%i,%f\n'%(l[0], l[1]))
-fh.close()
+        fh.close()
