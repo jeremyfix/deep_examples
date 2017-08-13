@@ -38,10 +38,15 @@ img_size = (224, 224)
 batch_size=16
 nb_epochs = 20
 
+vgg_mean = np.array([123.68, 116.779, 103.939], dtype=np.float32).reshape((1,1,3))
+def vgg_preprocess(x):
+	x = x - vgg_mean
+	return x[:, ::-1] # reverse axis rgb->bgr
+
 #train_datagen = ImageDataGenerator(featurewise_std_normalization=True)
 # Requires to be fitted to the data, and may need a fit_from_directory function. It also depends on what the pretrained networks expect from their input. 
-train_datagen = ImageDataGenerator(rescale=1./255.)
-valid_datagen = ImageDataGenerator(rescale=1./255.)
+train_datagen = ImageDataGenerator(rescale=1./255., preprocessing_function=vgg_preprocess)
+valid_datagen = ImageDataGenerator(rescale=1./255., preprocessing_function=vgg_preprocess)
 
 # Testing the generator
 # img = load_img("data/sample/train/cat/0.jpg")
@@ -74,7 +79,7 @@ loaded_model = VGG16(input_shape=img_size+(3,),
                      include_top=True, weights='imagenet')
 # Disable training of the layers up to the last FC bottleneck features
 # i.e. we allow training only of the last FC layers
-for layer in loaded_model.layers[:-3]:
+for layer in loaded_model.layers[:-1]:
     layer.trainable = False
 # Cut off the head and stack a bi-class classification layer
 loaded_model.layers.pop() # Remove the last classification layer
