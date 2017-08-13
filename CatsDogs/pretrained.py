@@ -19,6 +19,7 @@ from keras.layers import Dropout
 from keras.utils.data_utils import get_file
 from keras.callbacks import ModelCheckpoint
 from keras.models import load_model
+from keras import optimizers
 import glob
 import h5py
 import numpy as np 
@@ -79,7 +80,7 @@ loaded_model = VGG16(input_shape=img_size+(3,),
                      include_top=True, weights='imagenet')
 # Disable training of the layers up to the last FC bottleneck features
 # i.e. we allow training only of the last FC layers
-for layer in loaded_model.layers[:-1]:
+for layer in loaded_model.layers[:-3]:
     layer.trainable = False
 # Cut off the head and stack a bi-class classification layer
 loaded_model.layers.pop() # Remove the last classification layer
@@ -88,7 +89,8 @@ preds = Dense(1, activation='sigmoid')(last)
 model = Model(input=loaded_model.input, output=preds)
 model.summary()
 
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+sgd = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
 
 # Callbacks
 checkpoint_cb = ModelCheckpoint("best_model.h5", save_best_only=True)
@@ -101,7 +103,7 @@ model.fit_generator(train_generator,
                     epochs=nb_epochs,
                     validation_data=valid_generator, validation_steps=nb_validation_data//batch_size,
                     verbose=1,
-					callbacks=[checkpoint_cb])
+		    callbacks=[checkpoint_cb])
 
 # Generate the class probabilities for all the test images
 
