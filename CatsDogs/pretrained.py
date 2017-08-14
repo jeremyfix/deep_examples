@@ -95,6 +95,11 @@ model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
 # Callbacks
 checkpoint_cb = ModelCheckpoint("best_model.h5", save_best_only=True)
 
+WEIGHTS_PATH = 'https://github.com/fchollet/deep-learning-models/releases/download/v0.1/vgg16_weights_tf_dim_ordering_tf_kernels.h5'
+weights_path = get_file('vgg16_weights_tf_dim_ordering_tf_kernels.h5',
+		                                    WEIGHTS_PATH,
+											cache_subdir='models')
+model.load_weights(weights_path, by_name=True)
 
 # Fit the pretrained model
 print("Training")
