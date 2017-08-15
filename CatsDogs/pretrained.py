@@ -136,4 +136,4 @@ fh = open('submission.csv','w')
 fh.write('id,label\n')
 for l in submission:
 	fh.write('%i,%f\n'%(l[0], l[1]))
-        fh.close()
+fh.close()
