@@ -4,6 +4,8 @@
 # in order to classify Cats and Dogs
 
 # See also : https://blog.keras.io/building-powerful-image-classification-models-using-very-little-data.html
+# https://medium.com/towards-data-science/transfer-learning-using-keras-d804b2e04ef8
+
 
 # It accepts few options :
 
@@ -89,17 +91,17 @@ preds = Dense(1, activation='sigmoid')(last)
 model = Model(input=loaded_model.input, output=preds)
 model.summary()
 
-sgd = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+sgd = optimizers.SGD(lr=0.0001, momentum=0.9, nesterov=True)
 model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
 
 # Callbacks
 checkpoint_cb = ModelCheckpoint("best_model.h5", save_best_only=True)
 
-WEIGHTS_PATH = 'https://github.com/fchollet/deep-learning-models/releases/download/v0.1/vgg16_weights_tf_dim_ordering_tf_kernels.h5'
-weights_path = get_file('vgg16_weights_tf_dim_ordering_tf_kernels.h5',
-		                                    WEIGHTS_PATH,
-											cache_subdir='models')
-model.load_weights(weights_path, by_name=True)
+#WEIGHTS_PATH = 'https://github.com/fchollet/deep-learning-models/releases/download/v0.1/vgg16_weights_tf_dim_ordering_tf_kernels.h5'
+#weights_path = get_file('vgg16_weights_tf_dim_ordering_tf_kernels.h5',
+#		                                    WEIGHTS_PATH,
+#											cache_subdir='models')
+#model.load_weights(weights_path, by_name=True)
 
 # Fit the pretrained model
 print("Training")
