@@ -5,7 +5,7 @@ import glob
 import random
 import numpy as np
 
-raw_data_path = "raw_data"
+raw_data_path = os.path.expanduser("~/Datasets/CatsDogs/raw_data")
 dest_data_path = "data"
 
 classes = ["cat", "dog"]
@@ -17,7 +17,7 @@ prob_to_sample=0.1
 if not os.path.isdir(raw_data_path):
     print(
         "It seems {} does not exist, did you get the data there ?".format(raw_data_path))
-    os.exit(-1)
+    sys.exit(-1)
 
 def question(str):
     while True:
