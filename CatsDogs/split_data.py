@@ -10,25 +10,21 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     '--sourcedir',
     type=str,
-    default="/opt/DeepLearning/Datasets/CatsDogs",
     help='The directory where the raw_data are stored'
 )
 parser.add_argument(
     '--destdir',
     type=str,
-    default="./data",
     help='The directory where the split data will be stored'
 )
 parser.add_argument(
     '--probvalid',
     type=float,
-    default=0.1,
     help='The probability to put a sample in the validation set. In mean, we will have numsamples * set_size  samples in the validation set'
 )
 parser.add_argument(
     '--probsample',
     type=float,
-    default=0.1,
     help='The probability to put a sample in the small dataset. In mean, we will have numsamples * set_size  samples in the small dataset. This small dataset is for debugging purpose.'
 )
 

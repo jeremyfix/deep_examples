@@ -1,16 +1,24 @@
 
 # This script loads a model pretrained on ImageNet
 # Cuts off the head and replace it with 2 outputs
-# in order to classify Cats and Dogs
+
+# There are two modes,
+# - in the first mode, it computes the features maps, propagated
+#   through the VGG model and dumps on disk the feature maps for
+#   the train/val/test data
+# - in the second mode, it loads the precomputed feature maps
+#   and train only the classifier on top of these feature maps
+
+# To be run with :
+#  python pretrained.py --precompute_features
+#  python pretrained.py --classify
 
 # See also : https://blog.keras.io/building-powerful-image-classification-models-using-very-little-data.html
 # https://medium.com/towards-data-science/transfer-learning-using-keras-d804b2e04ef8
 
 
-# It accepts few options :
 
-# --fine_tune=<all, top>   : Fine tune only the last Dense layer or the whole architecture
-#
+
 
 import os
 from keras.preprocessing.image import ImageDataGenerator, img_to_array, load_img
@@ -24,7 +32,34 @@ from keras.models import load_model
 from keras import optimizers
 import glob
 import h5py
-import numpy as np 
+import numpy as np
+
+import argparse
+from argparse import RawTextHelpFormatter
+
+parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter)
+parser.add_argument(
+    '--sourcedir',
+    type=str,
+    default="/opt/DeepLearning/Datasets/CatsDogs",
+    help='The directory where the raw_data are stored'
+)
+
+parser.add_argument(
+    '--datadir',
+    type=str,
+    help="The directory where the train/val/test data are stored. \n"
+        "The script expects the images to be in:\n"
+        "- datadir/train/{cat,dog}/\n"
+        "- datadir/valid/{cat,dog}/\n"
+        "- datadir/test/images/\n"
+        "- datadir/sample/train/{cat,dog}\n"
+        "- datadir/sample/valid/{cat,dog}\n"
+        "and the same structure within datadir/features hosting the feature maps"
+)
+args = parser.parse_args()
+import sys
+sys.exit(-1)
 
 #datapath_train = os.path.join(*["data","sample","train"])
 #datapath_valid = os.path.join(*["data","sample", "valid"])
