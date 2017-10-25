@@ -34,7 +34,7 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-raw_data_path = os.path.expanduser(args.sourcedir)
+raw_data_path = args.sourcedir
 dest_data_path = args.destdir
 
 classes = ["cat", "dog"]
