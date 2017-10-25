@@ -4,15 +4,43 @@ import sys
 import glob
 import random
 import numpy as np
+import argparse
 
-raw_data_path = os.path.expanduser("~/Datasets/CatsDogs/raw_data")
-dest_data_path = "data"
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    '--sourcedir',
+    type=str,
+    default="/opt/DeepLearning/Datasets/CatsDogs",
+    help='The directory where the raw_data are stored'
+)
+parser.add_argument(
+    '--destdir',
+    type=str,
+    default="./data",
+    help='The directory where the split data will be stored'
+)
+parser.add_argument(
+    '--probvalid',
+    type=float,
+    default=0.1,
+    help='The probability to put a sample in the validation set. In mean, we will have numsamples * set_size  samples in the validation set'
+)
+parser.add_argument(
+    '--probsample',
+    type=float,
+    default=0.1,
+    help='The probability to put a sample in the small dataset. In mean, we will have numsamples * set_size  samples in the small dataset. This small dataset is for debugging purpose.'
+)
+
+args = parser.parse_args()
+
+raw_data_path = os.path.expanduser(args.sourcedir)
+dest_data_path = args.destdir
 
 classes = ["cat", "dog"]
 
-num_samples = 100
-perc_valid = 0.1
-prob_to_sample=0.1
+prob_to_valid = args.probvalid
+prob_to_sample= args.probsample
 
 if not os.path.isdir(raw_data_path):
     print(
@@ -57,9 +85,9 @@ for c in classes:
         shutil.copy(f, fdest)
         ntrain += 1
     
-    # We shall now move perc_valid * ntrain samples to valid/
+    # We shall now move prob_to_valid * ntrain samples to valid/
     random.shuffle(image_list)
-    nvalid = int(perc_valid * ntrain)
+    nvalid = int(prob_to_valid * ntrain)
     path=[dest_data_path, "valid",c]
     os.makedirs(os.path.join(*path))
     for f in image_list[:nvalid]:
