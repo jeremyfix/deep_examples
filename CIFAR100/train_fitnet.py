@@ -87,16 +87,15 @@ model = Model(inputs=[xi], outputs=[yo])
 optimizer = SGD(lr=0.01, momentum=0.9)
 
 def lr_rate(epoch):
-	if(epoch <= 10):
-		return 1e-3
-    elif(epoch <= 100):
-        return 1e-2
+    base_lr = 1e-3
+    if(epoch <= 100):
+        return base_lr
     elif(epoch <= 150):
-        return 1e-3
+        return base_lr/1e1
     elif(epoch <= 200):
-        return 1e-4
+        return base_lr/1e2
     else:
-        return 1e-5
+        return base_lr/1e3
     
 lr_sched = LearningRateScheduler(lr_rate)
 
