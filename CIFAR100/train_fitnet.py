@@ -14,7 +14,7 @@ from keras.layers import Input, Lambda, Dense, Activation, Flatten, BatchNormali
 from keras.layers.convolutional import Conv2D
 from keras.models import Model
 from keras.utils import to_categorical
-from keras.callbacks import LearningRateScheduler
+from keras.callbacks import LearningRateScheduler, Callback
 from keras.optimizers import SGD
 
 print("Loading the dataset")
