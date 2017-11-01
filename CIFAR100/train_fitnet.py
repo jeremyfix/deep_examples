@@ -16,7 +16,8 @@ from keras.models import Model
 from keras.utils import to_categorical
 from keras.callbacks import LearningRateScheduler, Callback
 from keras.optimizers import SGD
-
+from keras.preprocessing.image import ImageDataGenerator
+    
 print("Loading the dataset")
 (x_train, y_train), (x_test, y_test) = cifar100.load_data(label_mode='fine')
 
@@ -121,12 +122,29 @@ class TestCallback(Callback):
         print('\nTesting loss: {}, acc: {}\n'.format(loss, acc))
 
 test_cb = TestCallback((x_test, y_test))
-history = model.fit(x_train, y_train,\
-                    epochs=2,\
-                    batch_size=32, \
-                    validation_data=(x_val, y_val),
-                    callbacks=[lr_sched, test_cb])
-print(history.history)
+
+
+### Without data augmentation
+# history = model.fit(x_train, y_train,\
+#                     epochs=230,\
+#                     batch_size=32, \
+#                     validation_data=(x_val, y_val),
+#                     callbacks=[lr_sched, test_cb])
+
+
+### With data augmentation
+train_datagen = ImageDataGenerator(width_shift_range=4./32.,
+                                   height_shift_range=4./32.,
+                                   horizontal_flip=True)
+train_datagen.fit(x_train)
+history = model.fit_generator(datagen.flow(x_train, y_train, batch_size=32),
+                              steps_per_epoch=len(x_train)/32,
+                              epochs =230,
+                              validation_data=(x_val, y_val),
+                              callbacks=[lr_sched, test_cb])
+
+
+
 score = model.evaluate(x_test, y_test, verbose=0)
 print('Test loss:', score[0])
 print('Test accuracy:', score[1])
@@ -134,7 +152,7 @@ print('Test accuracy:', score[1])
 plt.figure()
 
 plt.subplot(121)
-plt.plot(history.history['train_acc'])
+plt.plot(history.history['acc'])
 plt.plot(history.history['val_acc'])
 plt.plot(test_cb.test_history['acc'])
                 
