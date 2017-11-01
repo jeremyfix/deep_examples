@@ -177,8 +177,9 @@ test_cb = TestCallback((x_test, y_test))
 
 if use_dataset_augmentation:
     # With data augmentation
-    datagen = ImageDataGenerator(width_shift_range=4./32.,
-                                 height_shift_range=4./32.,
+    datagen = ImageDataGenerator(width_shift_range=5./32.,
+                                 height_shift_range=5./32.,
+                                 zoom_range=0.2,
                                  horizontal_flip=True)
     datagen.fit(x_train)
     history = model.fit_generator(datagen.flow(x_train, y_train, batch_size=32),
@@ -210,7 +211,7 @@ for e in [100, 150, 200]:
 plt.title('model accuracy')
 plt.ylabel('accuracy')
 plt.xlabel('epoch')
-plt.legend(['train', 'val','test'], loc='middle right')
+plt.legend(['train', 'val','test'], loc='center right')
 
 plt.subplot(122)
 plt.plot(history.history['loss'])
@@ -222,7 +223,7 @@ for e in [100, 150, 200]:
 plt.title('model loss')
 plt.ylabel('loss')
 plt.xlabel('epoch')
-plt.legend(['train', 'val', 'test'], loc='middle right')
+plt.legend(['train', 'val', 'test'], loc='center right')
 
 suptitle = ""
 if use_dataset_augmentation:
