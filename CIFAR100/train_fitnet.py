@@ -105,12 +105,14 @@ model.compile(loss='categorical_crossentropy',
 
 model.summary()
 
-test_history = {'loss':[], 'acc':[]}
-class TestCallback(Callback):
-    def __init__(self, test_history, test_data):
-        self.test_data = test_data
-        self.test_history = test_history
 
+class TestCallback(Callback):
+    def __init__(self, test_data):
+        self.test_data = test_data
+
+    def on_train_begin(self, logs={}):
+        self.test_history = {'loss':[], 'acc':[]}
+        
     def on_epoch_end(self, epoch, logs={}):
         x, y = self.test_data
         loss, acc = self.model.evaluate(x, y, verbose=0)
@@ -118,11 +120,12 @@ class TestCallback(Callback):
         self.test_history['acc'].append(acc)
         print('\nTesting loss: {}, acc: {}\n'.format(loss, acc))
 
+test_cb = TestCallback((x_test, y_test))
 history = model.fit(x_train, y_train,\
                     epochs=2,\
                     batch_size=32, \
                     validation_data=(x_val, y_val),
-                    callbacks=[lr_sched, TestCallback((x_test, y_test), test_history)])
+                    callbacks=[lr_sched, test_cb])
 
 score = model.evaluate(x_test, y_test, verbose=0)
 print('Test loss:', score[0])
@@ -133,7 +136,7 @@ plt.figure()
 plt.subplot(121)
 plt.plot(history.history['train_acc'])
 plt.plot(history.history['val_acc'])
-plt.plot(test_history['acc'])
+plt.plot(test_cb.test_history['acc'])
                 
 plt.title('model accuracy')
 plt.ylabel('accuracy')
@@ -143,7 +146,7 @@ plt.legend(['train', 'val','test'], loc='middle right')
 plt.subplot(122)
 plt.plot(history.history['loss'])
 plt.plot(history.history['val_loss'])
-plt.plot(test_history['loss'])
+plt.plot(test_cb.test_history['loss'])
 plt.title('model loss')
 plt.ylabel('loss')
 plt.xlabel('epoch')
