@@ -4,15 +4,21 @@
 ## From the original paper, they said to use lr=0.01 at start
 ## but after 30 steps, the loss diverges.
 
-## initial (relu, nodropout, no augmentation): got 44% on the val set
-## with dataset augmentation : reached 58%
+## initial (relu, nodropout, no augmentation): got 44% on the val set, 99% train
+## with dataset augmentation : reached val/test 58%, train 99%
 ## With dropout and augmentation : ??
-## changing relu to elu : 
+## changing relu to elu : ??
+
+## Notes :
+# for the lecture, use base_lrate 0.01 : it converges then diverges
+# show the impact of dataset augmentation/dropout on generalization
+# 
 
 import matplotlib
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+plt.style.use('ggplot')
 
 import numpy as np
 import argparse
@@ -36,6 +42,12 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    '--dropout',
+    help='Specify to use dropout',
+    action='store_true'
+)
+
+parser.add_argument(
     '--base_lrate',
     help='Which base learning rate to use',
     type=float,
@@ -53,6 +65,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 use_dataset_augmentation = args.data_augment
+use_dropout = args.dropout
 base_lrate = args.base_lrate
 activation = args.activation
 
@@ -121,7 +134,8 @@ for i in range(5):
 
 x = GlobalAveragePooling2D()(x)
 x = Dense(500, activation=activation, kernel_initializer=kernel_initializer)(x)
-x = Dropout(0.5)(x)
+if use_dropout:
+    x = Dropout(0.5)(x)
 yo = Dense(num_classes, activation='softmax', kernel_initializer=kernel_initializer)(x)
 
 model = Model(inputs=[xi], outputs=[yo])
@@ -191,7 +205,9 @@ plt.subplot(121)
 plt.plot(history.history['acc'])
 plt.plot(history.history['val_acc'])
 plt.plot(test_cb.test_history['acc'])
-                
+for e in [100, 150, 200]:
+    plt.axvline(e, linewidth=2, linestyle='--', color='r')
+
 plt.title('model accuracy')
 plt.ylabel('accuracy')
 plt.xlabel('epoch')
@@ -201,6 +217,9 @@ plt.subplot(122)
 plt.plot(history.history['loss'])
 plt.plot(history.history['val_loss'])
 plt.plot(test_cb.test_history['loss'])
+for e in [100, 150, 200]:
+    plt.axvline(e, linewidth=2, linestyle='--', color='r')
+    
 plt.title('model loss')
 plt.ylabel('loss')
 plt.xlabel('epoch')
