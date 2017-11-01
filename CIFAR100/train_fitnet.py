@@ -133,7 +133,7 @@ test_cb = TestCallback((x_test, y_test))
 
 
 ### With data augmentation
-train_datagen = ImageDataGenerator(width_shift_range=4./32.,
+datagen = ImageDataGenerator(width_shift_range=4./32.,
                                    height_shift_range=4./32.,
                                    horizontal_flip=True)
 train_datagen.fit(x_train)
