@@ -82,7 +82,7 @@ model = Model(inputs=[xi], outputs=[yo])
 optimizer = SGD(lr=0.01, momentum=0.9)
 
 def lr_rate(epoch):
-    elif(epoch <= 100):
+    if(epoch <= 100):
         return 1e-2
     elif(epoch <= 150):
         return 1e-3
