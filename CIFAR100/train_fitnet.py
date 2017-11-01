@@ -69,7 +69,6 @@ use_dropout = args.dropout
 base_lrate = args.base_lrate
 activation = args.activation
 
-
 print("Loading the dataset")
 (x_train, y_train), (x_test, y_test) = cifar100.load_data(label_mode='fine')
 
@@ -225,4 +224,12 @@ plt.ylabel('loss')
 plt.xlabel('epoch')
 plt.legend(['train', 'val', 'test'], loc='middle right')
 
+suptitle = ""
+if use_dataset_augmentation:
+    suptitle += " DatasetAugment "
+if use_dropout:
+    suptitle += " Dropout"
+suptitle += " lr:{} ".format(base_lrate)
+suptitle += activation
+plt.suptitle(suptitle)
 plt.savefig('fitnet.pdf', bbox_inches='tight')
