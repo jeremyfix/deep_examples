@@ -126,7 +126,7 @@ history = model.fit(x_train, y_train,\
                     batch_size=32, \
                     validation_data=(x_val, y_val),
                     callbacks=[lr_sched, test_cb])
-
+print(history)
 score = model.evaluate(x_test, y_test, verbose=0)
 print('Test loss:', score[0])
 print('Test accuracy:', score[1])
