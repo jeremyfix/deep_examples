@@ -39,10 +39,16 @@ from argparse import RawTextHelpFormatter
 
 parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter)
 parser.add_argument(
-    '--sourcedir',
-    type=str,
-    default="/opt/DeepLearning/Datasets/CatsDogs",
-    help='The directory where the raw_data are stored'
+        '--sourcedir',
+        type=str,
+        default="/opt/DeepLearning/Datasets/CatsDogs",
+        help='The directory where the raw_data are stored'
+)
+
+parser.add_argument(
+        '--sample',
+        action='store_true',
+        help='Specify it if you want to work with the sample data'
 )
 
 parser.add_argument(
@@ -57,15 +63,20 @@ parser.add_argument(
         "- datadir/sample/valid/{cat,dog}\n"
         "and the same structure within datadir/features hosting the feature maps"
 )
+parser.add_argument(
+    '--mode',
+    choices=['features', 'classify', 'test'],
+    default='None',
+    help='In which mode to work',
+    action='store'
+)
+
 args = parser.parse_args()
 import sys
 sys.exit(-1)
 
-#datapath_train = os.path.join(*["data","sample","train"])
-#datapath_valid = os.path.join(*["data","sample", "valid"])
-
-datapath_train = os.path.join(*["data","train"])
-datapath_valid = os.path.join(*["data","valid"])
+datapath_train = os.path.join(*[args.datadir,"train"])
+datapath_valid = os.path.join(*[args.datadir,"valid"])
 
 datapath_test = os.path.join(*["data","test"])
 

@@ -56,7 +56,8 @@ x = xl
 
 ### FitNet-4
 # kernel_initializer='glorot_uniform' does not work very well
-kernel_initializer='glorot_normal'
+# kernel_initializer='glorot_normal'
+kernel_initializer='he_normal'
 
 for i in range(3):
     x = Conv2D(filters=32, kernel_size=3, strides=1, activation='relu', padding='same', kernel_initializer=kernel_initializer)(x)
