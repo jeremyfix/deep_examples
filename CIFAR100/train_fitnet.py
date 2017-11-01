@@ -4,23 +4,59 @@
 ## From the original paper, they said to use lr=0.01 at start
 ## but after 30 steps, the loss diverges.
 
+## initial (relu, nodropout, no augmentation): got 44% on the val set
+## with dataset augmentation : reached 58%
+## With dropout and augmentation : ??
+## changing relu to elu : 
 
 import matplotlib
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-from keras.datasets import cifar100
 import numpy as np
-from sklearn.model_selection import train_test_split
-from keras.layers import Input, Lambda, Dense, Activation, Flatten, BatchNormalization, GlobalAveragePooling2D, MaxPooling2D
+import argparse
+
+from keras.datasets import cifar100
+from keras.layers import Input, Lambda, Dense, Activation, Flatten, BatchNormalization, GlobalAveragePooling2D, MaxPooling2D, Dropout
 from keras.layers.convolutional import Conv2D
 from keras.models import Model
 from keras.utils import to_categorical
 from keras.callbacks import LearningRateScheduler, Callback
 from keras.optimizers import SGD
 from keras.preprocessing.image import ImageDataGenerator
-    
+
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument(
+    '--data_augment',
+    help='Specify if you want to use data augmentation',
+    action='store_true'
+)
+
+parser.add_argument(
+    '--base_lrate',
+    help='Which base learning rate to use',
+    type=float,
+    default=0.001
+)
+
+parser.add_argument(
+    '--activation',
+    help="which activation function to use",
+    choices=['relu','elu'],
+    required=True,
+    action='store'
+)
+
+args = parser.parse_args()
+
+use_dataset_augmentation = args.data_augment
+base_lrate = args.base_lrate
+activation = args.activation
+
+
 print("Loading the dataset")
 (x_train, y_train), (x_test, y_test) = cifar100.load_data(label_mode='fine')
 
@@ -68,38 +104,38 @@ x = xl
 kernel_initializer='he_normal'
 
 for i in range(3):
-    x = Conv2D(filters=32, kernel_size=3, strides=1, activation='relu', padding='same', kernel_initializer=kernel_initializer)(x)
+    x = Conv2D(filters=32, kernel_size=3, strides=1, activation=activation, padding='same', kernel_initializer=kernel_initializer)(x)
 
 for i in range(2):
-    x = Conv2D(filters=48, kernel_size=3, strides=1, activation='relu', padding='same', kernel_initializer=kernel_initializer)(x)
+    x = Conv2D(filters=48, kernel_size=3, strides=1, activation=activation, padding='same', kernel_initializer=kernel_initializer)(x)
 
 x = MaxPooling2D(pool_size=(2,2), strides=(2,2))(x)
 
 for i in range(5):
-    x = Conv2D(filters=80, kernel_size=3, strides=1, activation='relu', padding='same', kernel_initializer=kernel_initializer)(x)
+    x = Conv2D(filters=80, kernel_size=3, strides=1, activation=activation, padding='same', kernel_initializer=kernel_initializer)(x)
 
 x = MaxPooling2D(pool_size=(2,2), strides=(2,2))(x)
 
 for i in range(5):
-    x = Conv2D(filters=128, kernel_size=3, strides=1, activation='relu', padding='same', kernel_initializer=kernel_initializer)(x)
+    x = Conv2D(filters=128, kernel_size=3, strides=1, activation=activation, padding='same', kernel_initializer=kernel_initializer)(x)
 
 x = GlobalAveragePooling2D()(x)
-x = Dense(500, activation='relu', kernel_initializer=kernel_initializer)(x)
+x = Dense(500, activation=activation, kernel_initializer=kernel_initializer)(x)
+x = Dropout(0.5)(x)
 yo = Dense(num_classes, activation='softmax', kernel_initializer=kernel_initializer)(x)
 
 model = Model(inputs=[xi], outputs=[yo])
 optimizer = SGD(lr=0.01, momentum=0.9)
 
 def lr_rate(epoch):
-    base_lr = 1e-3
     if(epoch <= 100):
-        return base_lr
+        return base_lrate
     elif(epoch <= 150):
-        return base_lr/1e1
+        return base_lrate/1e1
     elif(epoch <= 200):
-        return base_lr/1e2
+        return base_lrate/1e2
     else:
-        return base_lr/1e3
+        return base_lrate/1e3
     
 lr_sched = LearningRateScheduler(lr_rate)
 
@@ -126,27 +162,24 @@ class TestCallback(Callback):
 
 test_cb = TestCallback((x_test, y_test))
 
-
-### Without data augmentation
-# history = model.fit(x_train, y_train,\
-#                     epochs=230,\
-#                     batch_size=32, \
-#                     validation_data=(x_val, y_val),
-#                     callbacks=[lr_sched, test_cb])
-
-
-### With data augmentation
-datagen = ImageDataGenerator(width_shift_range=4./32.,
-                                   height_shift_range=4./32.,
-                                   horizontal_flip=True)
-datagen.fit(x_train)
-history = model.fit_generator(datagen.flow(x_train, y_train, batch_size=32),
-                              steps_per_epoch=len(x_train)/32,
-                              epochs =230,
-                              validation_data=(x_val, y_val),
-                              callbacks=[lr_sched, test_cb])
-
-
+if use_dataset_augmentation:
+    # With data augmentation
+    datagen = ImageDataGenerator(width_shift_range=4./32.,
+                                 height_shift_range=4./32.,
+                                 horizontal_flip=True)
+    datagen.fit(x_train)
+    history = model.fit_generator(datagen.flow(x_train, y_train, batch_size=32),
+                                  steps_per_epoch=len(x_train)/32,
+                                  epochs =230,
+                                  validation_data=(x_val, y_val),
+                                  callbacks=[lr_sched, test_cb])
+else:
+    # Without data augmentation
+    history = model.fit(x_train, y_train,\
+                        epochs=230,\
+                        batch_size=32, \
+                        validation_data=(x_val, y_val),
+                        callbacks=[lr_sched, test_cb])
 
 score = model.evaluate(x_test, y_test, verbose=0)
 print('Test loss:', score[0])
