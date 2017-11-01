@@ -55,32 +55,33 @@ xl = Lambda(lambda image, mu, std: (image-mu)/std,
 x = xl
 
 ### FitNet-4
+# kernel_initializer='glorot_uniform' does not work very well
+kernel_initializer='glorot_normal'
+
 for i in range(3):
-    x = Conv2D(filters=32, kernel_size=3, strides=1, activation='relu', padding='same', kernel_initializer='glorot_uniform')(x)
+    x = Conv2D(filters=32, kernel_size=3, strides=1, activation='relu', padding='same', kernel_initializer=kernel_initializer)(x)
 
 for i in range(2):
-    x = Conv2D(filters=48, kernel_size=3, strides=1, activation='relu', padding='same', kernel_initializer='glorot_uniform')(x)
+    x = Conv2D(filters=48, kernel_size=3, strides=1, activation='relu', padding='same', kernel_initializer=kernel_initializer)(x)
 
 x = MaxPooling2D(pool_size=(2,2), strides=(2,2))(x)
 
 for i in range(5):
-    x = Conv2D(filters=80, kernel_size=3, strides=1, activation='relu', padding='same', kernel_initializer='glorot_uniform')(x)
+    x = Conv2D(filters=80, kernel_size=3, strides=1, activation='relu', padding='same', kernel_initializer=kernel_initializer)(x)
 
 x = MaxPooling2D(pool_size=(2,2), strides=(2,2))(x)
 
 for i in range(5):
-    x = Conv2D(filters=128, kernel_size=3, strides=1, activation='relu', padding='same', kernel_initializer='glorot_uniform')(x)
+    x = Conv2D(filters=128, kernel_size=3, strides=1, activation='relu', padding='same', kernel_initializer=kernel_initializer)(x)
 
 x = GlobalAveragePooling2D()(x)
-x = Dense(500, activation='relu', kernel_initializer='glorot_uniform')(x)
-yo = Dense(num_classes, activation='softmax', kernel_initializer='glorot_uniform')(x)
+x = Dense(500, activation='relu', kernel_initializer=kernel_initializer)(x)
+yo = Dense(num_classes, activation='softmax', kernel_initializer=kernel_initializer)(x)
 
 model = Model(inputs=[xi], outputs=[yo])
 optimizer = SGD(lr=0.01, momentum=0.9)
 
 def lr_rate(epoch):
-    if(epoch <= 10):
-        return 1e-3
     elif(epoch <= 100):
         return 1e-2
     elif(epoch <= 150):
