@@ -48,6 +48,12 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    '--bn',
+    help='Specify to use batch normalization',
+    action='store_true'
+)
+
+parser.add_argument(
     '--base_lrate',
     help='Which base learning rate to use',
     type=float,
@@ -66,6 +72,7 @@ args = parser.parse_args()
 
 use_dataset_augmentation = args.data_augment
 use_dropout = args.dropout
+use_bn = args.bn
 base_lrate = args.base_lrate
 activation = args.activation
 
@@ -115,21 +122,33 @@ x = xl
 # kernel_initializer='glorot_normal'
 kernel_initializer='he_normal'
 
-for i in range(3):
-    x = Conv2D(filters=32, kernel_size=3, strides=1, activation=activation, padding='same', kernel_initializer=kernel_initializer)(x)
+for i in range(5):
+    x = Conv2D(filters=32, kernel_size=3, strides=1, padding='same', kernel_initializer=kernel_initializer)(x)
+    if use_bn:
+        x = BatchNormalization()(x)
+    x = Activation(activation)(x)
 
-for i in range(2):
-    x = Conv2D(filters=48, kernel_size=3, strides=1, activation=activation, padding='same', kernel_initializer=kernel_initializer)(x)
+for i in range(5):
+    x = Conv2D(filters=48, kernel_size=3, strides=1, padding='same', kernel_initializer=kernel_initializer)(x)
+    if use_bn:
+        x = BatchNormalization()(x)
+    x = Activation(activation)(x)
 
 x = MaxPooling2D(pool_size=(2,2), strides=(2,2))(x)
 
 for i in range(5):
-    x = Conv2D(filters=80, kernel_size=3, strides=1, activation=activation, padding='same', kernel_initializer=kernel_initializer)(x)
+    x = Conv2D(filters=80, kernel_size=3, strides=1, padding='same', kernel_initializer=kernel_initializer)(x)
+    if use_bn:
+        x = BatchNormalization()(x)
+    x = Activation(activation)(x)
 
 x = MaxPooling2D(pool_size=(2,2), strides=(2,2))(x)
 
 for i in range(5):
-    x = Conv2D(filters=128, kernel_size=3, strides=1, activation=activation, padding='same', kernel_initializer=kernel_initializer)(x)
+    x = Conv2D(filters=128, kernel_size=3, strides=1, padding='same', kernel_initializer=kernel_initializer)(x)
+    if use_bn:
+        x = BatchNormalization()(x)
+    x = Activation(activation)(x)
 
 x = GlobalAveragePooling2D()(x)
 x = Dense(500, activation=activation, kernel_initializer=kernel_initializer)(x)
