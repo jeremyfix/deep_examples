@@ -2,9 +2,13 @@
 ##############################################################
 #### Simulations inspired from "All you need is a good init"
 
+import matplotlib
+# Force matplotlib to not use any Xwindows backend.
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
 from keras.datasets import cifar100
 import numpy as np
-import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from keras.layers import Input, Lambda, Dense, Activation, Flatten, BatchNormalization, GlobalAveragePooling2D, MaxPooling2D
 from keras.layers.convolutional import Conv2D
@@ -83,7 +87,9 @@ model = Model(inputs=[xi], outputs=[yo])
 optimizer = SGD(lr=0.01, momentum=0.9)
 
 def lr_rate(epoch):
-    if(epoch <= 100):
+	if(epoch <= 10):
+		return 1e-3
+    elif(epoch <= 100):
         return 1e-2
     elif(epoch <= 150):
         return 1e-3
