@@ -4,6 +4,7 @@
 
 from keras.datasets import cifar100
 import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from keras.layers import Input, Lambda, Dense, Activation, Flatten, BatchNormalization, GlobalAveragePooling2D, MaxPooling2D
 from keras.layers.convolutional import Conv2D
@@ -95,12 +96,31 @@ model.compile(loss='categorical_crossentropy',
 
 model.summary()
 
-model.fit(x_train, y_train,\
-          epochs=230,\
-          batch_size=32, \
-          validation_data=(x_val, y_val),
-          callbacks=[lr_sched])
+history = model.fit(x_train, y_train,\
+                    epochs=230,\
+                    batch_size=32, \
+                    validation_data=(x_val, y_val),
+                    callbacks=[lr_sched])
 
-score = model.evaluate(X_test, y_test, verbose=0)
+score = model.evaluate(x_test, y_test, verbose=0)
 print('Test loss:', score[0])
 print('Test accuracy:', score[1])
+
+plt.figure()
+
+plt.subplot(121)
+plt.plot(history.history['val_acc'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+
+plt.subplot(122)
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+
+plt.savefig('fitnet.pdf', bbox_inches='tight')
