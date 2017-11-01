@@ -1,6 +1,9 @@
 
 ##############################################################
 #### Simulations inspired from "All you need is a good init"
+## From the original paper, they said to use lr=0.01 at start
+## but after 30 steps, the loss diverges.
+
 
 import matplotlib
 # Force matplotlib to not use any Xwindows backend.
@@ -136,7 +139,7 @@ test_cb = TestCallback((x_test, y_test))
 datagen = ImageDataGenerator(width_shift_range=4./32.,
                                    height_shift_range=4./32.,
                                    horizontal_flip=True)
-train_datagen.fit(x_train)
+datagen.fit(x_train)
 history = model.fit_generator(datagen.flow(x_train, y_train, batch_size=32),
                               steps_per_epoch=len(x_train)/32,
                               epochs =230,
