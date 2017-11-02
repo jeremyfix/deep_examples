@@ -69,6 +69,12 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    '--batch_size',
+    required=True,
+    type=int
+)
+
+parser.add_argument(
     '--runid',
     required=True, 
     type=int
@@ -82,6 +88,7 @@ use_bn = args.bn
 base_lrate = args.base_lrate
 activation = args.activation
 run_id = args.runid
+batch_size = args.batch_size
 
 print("Loading the dataset")
 (x_train, y_train), (x_test, y_test) = cifar100.load_data(label_mode='fine')
@@ -110,6 +117,8 @@ x_train_mean = x_train.mean(axis=0)
 x_train_std = x_train.std(axis=0)
 
 input_shape = (x_train.shape[1], x_train.shape[2], x_train.shape[3])
+img_height = x_train.shape[1]
+img_width = x_train.shape[2]
 num_classes = 100
 
 y_train = to_categorical(y_train, num_classes=num_classes)
@@ -203,13 +212,13 @@ test_cb = TestCallback((x_test, y_test))
 
 if use_dataset_augmentation:
     # With data augmentation
-    datagen = ImageDataGenerator(width_shift_range=5./32.,
-                                 height_shift_range=5./32.,
+    datagen = ImageDataGenerator(width_shift_range=5./img_width.,
+                                 height_shift_range=5./img_height,
                                  zoom_range=0.2,
                                  horizontal_flip=True)
     datagen.fit(x_train)
-    history = model.fit_generator(datagen.flow(x_train, y_train, batch_size=32),
-                                  steps_per_epoch=len(x_train)/32,
+    history = model.fit_generator(datagen.flow(x_train, y_train, batch_size=batch_size),
+                                  steps_per_epoch=len(x_train)/batch_size,
                                   epochs =230,
                                   validation_data=(x_val, y_val),
                                   callbacks=[lr_sched, test_cb])
@@ -217,7 +226,7 @@ else:
     # Without data augmentation
     history = model.fit(x_train, y_train,\
                         epochs=230,\
-                        batch_size=32, \
+                        batch_size=batch_size, \
                         validation_data=(x_val, y_val),
                         callbacks=[lr_sched, test_cb])
 
@@ -259,6 +268,7 @@ if use_dropout:
 if not use_bn:
     suptitle += " NoBN "
 suptitle += " lr:{} ".format(base_lrate)
+suptitle += " bs:{} ".format(batch_size)
 suptitle += activation
 suptitle += '_' + str(run_id)
 plt.suptitle(suptitle)
