@@ -256,6 +256,8 @@ if use_dataset_augmentation:
     suptitle += " DatasetAugment "
 if use_dropout:
     suptitle += " Dropout"
+if not use_bn:
+    suptitle += " NoBN "
 suptitle += " lr:{} ".format(base_lrate)
 suptitle += activation
 suptitle += '_' + str(run_id)
