@@ -68,6 +68,12 @@ parser.add_argument(
     action='store'
 )
 
+parser.add_argument(
+    '--runid',
+    required=True, 
+    type=int
+)
+
 args = parser.parse_args()
 
 use_dataset_augmentation = args.data_augment
@@ -75,6 +81,7 @@ use_dropout = args.dropout
 use_bn = args.bn
 base_lrate = args.base_lrate
 activation = args.activation
+run_id = args.runid
 
 print("Loading the dataset")
 (x_train, y_train), (x_test, y_test) = cifar100.load_data(label_mode='fine')
@@ -251,5 +258,10 @@ if use_dropout:
     suptitle += " Dropout"
 suptitle += " lr:{} ".format(base_lrate)
 suptitle += activation
+suptitle += '_' + str(run_id)
 plt.suptitle(suptitle)
-plt.savefig('fitnet.pdf', bbox_inches='tight')
+filename = 'fitnet' + suptitle.replace(' ','_')
+plt.savefig(filename + ".pdf", bbox_inches='tight')
+
+
+model.save('weights/'+ filename + '.h5')
