@@ -212,7 +212,7 @@ test_cb = TestCallback((x_test, y_test))
 
 if use_dataset_augmentation:
     # With data augmentation
-    datagen = ImageDataGenerator(width_shift_range=5./img_width.,
+    datagen = ImageDataGenerator(width_shift_range=5./img_width,
                                  height_shift_range=5./img_height,
                                  zoom_range=0.2,
                                  horizontal_flip=True)
