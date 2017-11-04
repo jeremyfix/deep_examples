@@ -3,6 +3,7 @@ from keras.datasets import cifar100
 from keras.utils import to_categorical
 import numpy as np
 import sys
+import h5py
 
 if len(sys.argv) <= 1:
     print("Usage : {} model1.h5 model2.h5 ...".format(sys.argv[0]))
