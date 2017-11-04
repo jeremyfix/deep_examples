@@ -12,7 +12,12 @@ print("Loading the dataset")
 (x_train, y_train), (x_test, y_test) = cifar100.load_data(label_mode='fine')
 
 num_classes = 100
-y_test = to_categorical(y_test, num_classes=num_classes)
+y_test_cat = to_categorical(y_test, num_classes=num_classes)
+
+def acc_loss(logits, y_classes):
+    loss = -np.log(logits[:,y_classes]).sum()
+    return loss
+                   
 
 print("Loading the models and computing their predictions")
 predictions = []
@@ -22,9 +27,12 @@ for f in sys.argv[1:]:
     print("Computing the predictions of {}".format(f))
 
     pred = model.predict(x_test,verbose=0)
-    print(pred)
     predictions.append(pred)
-
+    scores = model.evaluate(x_test, y_test_cat, verbose=0)
+    print("From eval : {}".format(scores))
+    scores = acc_loss(pred, y_test)
+    print(scores)
+    
 predictions = np.array(predictions)
 print(predictions.shape)
 print(predictions.dtype)
