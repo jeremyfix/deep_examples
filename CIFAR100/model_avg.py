@@ -17,8 +17,8 @@ y_test_cat = to_categorical(y_test, num_classes=num_classes)
 def acc_loss(logits, y_classes):
     print(logits, y_classes)
     print(logits.shape, y_classes.shape, y_classes.ravel().shape)
-    print(logits[np.range(y_classes.shape[0]),y_classes.ravel()])
-    loss = -np.log(logits[np.range(y_classes.shape[0]),y_classes.ravel()]).sum()/y_classes.shape[0]
+    print(logits[np.arange(y_classes.shape[0]),y_classes.ravel()])
+    loss = -np.log(logits[np.arange(y_classes.shape[0]),y_classes.ravel()]).sum()/y_classes.shape[0]
     pred_classes = np.argmax(logits, axis=1)
     acc = (pred_classes == y_classes.ravel()).sum()/y_classes.shape[0]
     return loss, acc
