@@ -31,8 +31,9 @@ for idx, f in enumerate(sys.argv[1:]):
     pred = model.predict(x_test,verbose=0)
 
     scores = acc_loss(pred, y_test)
-    print("Model {} : Loss={}, Accuracy={}".format(idx, *scores))
+    print("Model {} : Loss={}, Accuracy={}".format(idx, scores[0], scores[1]))
     predictions.append(pred)
+    del model
     
 predictions = np.array(predictions)
 pred_avg = np.mean(predictions, axis=0)
