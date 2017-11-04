@@ -31,7 +31,7 @@ from keras.utils import to_categorical
 from keras.callbacks import LearningRateScheduler, Callback
 from keras.optimizers import SGD
 from keras.preprocessing.image import ImageDataGenerator
-
+from keras.layers.merge import add
 
 parser = argparse.ArgumentParser()
 
@@ -44,6 +44,11 @@ parser.add_argument(
 parser.add_argument(
     '--dropout',
     help='Specify to use dropout',
+    action='store_true'
+)
+parser.add_argument(
+    '--shortcut',
+    help='Specify to use shortcut connections',
     action='store_true'
 )
 
@@ -84,6 +89,7 @@ args = parser.parse_args()
 
 use_dataset_augmentation = args.data_augment
 use_dropout = args.dropout
+use_shortcut = args.shortcut
 use_bn = args.bn
 base_lrate = args.base_lrate
 activation = args.activation
@@ -138,33 +144,53 @@ x = xl
 # kernel_initializer='glorot_normal'
 kernel_initializer='he_normal'
 
+x_prev = x
 for i in range(5):
     x = Conv2D(filters=32, kernel_size=3, strides=1, padding='same', kernel_initializer=kernel_initializer)(x)
     if use_bn:
         x = BatchNormalization()(x)
     x = Activation(activation)(x)
+if use_shortcut:
+    x_prev = Conv2D(filters=32, kernel_size=1, strides=1, padding='same', kernel_initializer=kernel_initializer)(x_prev)
+    x_prev = Activation(activation)(x_prev)
+    x = add([x_prev, x])
 
+x_prev = x
 for i in range(5):
     x = Conv2D(filters=48, kernel_size=3, strides=1, padding='same', kernel_initializer=kernel_initializer)(x)
     if use_bn:
         x = BatchNormalization()(x)
     x = Activation(activation)(x)
+if use_shortcut:
+    x_prev = Conv2D(filters=48, kernel_size=1, strides=1, padding='same', kernel_initializer=kernel_initializer)(x_prev)
+    x_prev = Activation(activation)(x_prev)
+    x = add([x_prev, x])
 
 x = MaxPooling2D(pool_size=(2,2), strides=(2,2))(x)
 
+x_prev = x
 for i in range(5):
     x = Conv2D(filters=80, kernel_size=3, strides=1, padding='same', kernel_initializer=kernel_initializer)(x)
     if use_bn:
         x = BatchNormalization()(x)
     x = Activation(activation)(x)
+if use_shortcut:
+    x_prev = Conv2D(filters=80, kernel_size=1, strides=1, padding='same', kernel_initializer=kernel_initializer)(x_prev)
+    x_prev = Activation(activation)(x_prev)
+    x = add([x_prev, x])
 
 x = MaxPooling2D(pool_size=(2,2), strides=(2,2))(x)
 
+x_prev = x
 for i in range(5):
     x = Conv2D(filters=128, kernel_size=3, strides=1, padding='same', kernel_initializer=kernel_initializer)(x)
     if use_bn:
         x = BatchNormalization()(x)
     x = Activation(activation)(x)
+if use_shortcut:
+    x_prev = Conv2D(filters=128, kernel_size=1, strides=1, padding='same', kernel_initializer=kernel_initializer)(x_prev)
+    x_prev = Activation(activation)(x_prev)
+    x = add([x_prev, x])
 
 x = GlobalAveragePooling2D()(x)
 x = Dense(500, activation=activation, kernel_initializer=kernel_initializer)(x)
@@ -270,6 +296,7 @@ if not use_bn:
 suptitle += " lr:{} ".format(base_lrate)
 suptitle += " bs:{} ".format(batch_size)
 suptitle += activation
+suptitle += " shortcut "
 suptitle += '_' + str(run_id)
 plt.suptitle(suptitle)
 filename = 'fitnet' + suptitle.replace(' ','_')
