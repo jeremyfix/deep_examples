@@ -1,6 +1,7 @@
 from keras.models import load_model
 from keras.datasets import cifar100
 from keras.utils import to_categorical
+import numpy as np
 import sys
 
 if len(sys.argv) <= 1:
@@ -14,6 +15,7 @@ num_classes = 100
 y_test = to_categorical(y_test, num_classes=num_classes)
 
 print("Loading the models and computing their predictions")
+predictions = []
 for f in sys.argv[1:]:
     model = load_model(f)
 
@@ -21,4 +23,8 @@ for f in sys.argv[1:]:
 
     pred = model.predict(x_test,verbose=0)
     print(pred)
+    predictions.append(pred)
 
+predictions = np.array(predictions)
+print(predictions.shape)
+print(predictions.dtype)
