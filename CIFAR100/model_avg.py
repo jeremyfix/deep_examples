@@ -25,9 +25,9 @@ def acc_loss(logits, y_classes):
 print("Loading the models and computing their predictions")
 predictions = []
 for idx, f in enumerate(sys.argv[1:]):
-    with h5py.File(f, 'a') as f:
-        if 'optimizer_weights' in f.keys():
-            del f['optimizer_weights']
+    with h5py.File(f, 'a') as fh5:
+        if 'optimizer_weights' in fh5.keys():
+            del fh5['optimizer_weights']
     
     model = load_model(f)
 
