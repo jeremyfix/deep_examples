@@ -23,18 +23,16 @@ def acc_loss(logits, y_classes):
 
 print("Loading the models and computing their predictions")
 predictions = []
-for f in sys.argv[1:]:
+for idx, f in enumerate(sys.argv[1:]):
     model = load_model(f)
 
     print("Computing the predictions of {}".format(f))
 
     pred = model.predict(x_test,verbose=0)
-    scores = model.evaluate(x_test, y_test_cat, verbose=0)
-    print("From eval : {}".format(scores))
+
     scores = acc_loss(pred, y_test)
-    print(scores)
+    print("Model {} : Loss={}, Accuracy={}", idx, *scores)
     predictions.append(pred)
     
 predictions = np.array(predictions)
-print(predictions.shape)
-print(predictions.dtype)
+
