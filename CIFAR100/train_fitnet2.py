@@ -24,6 +24,7 @@ from keras.optimizers import SGD
 from keras.preprocessing.image import ImageDataGenerator
 from keras.layers.merge import add
 from keras import regularizers
+from keras.callbacks import ModelCheckpoint
 
 parser = argparse.ArgumentParser()
 
@@ -94,6 +95,24 @@ activation = args.activation
 run_id = args.runid
 batch_size = args.batch_size
 use_l2_reg = args.l2_reg
+
+suptitle = "v2 "
+if use_dataset_augmentation:
+    suptitle += " DatasetAugment "
+if use_dropout:
+    suptitle += " Dropout"
+if use_l2_reg:
+    suptitle += " l2reg "
+if not use_bn:
+    suptitle += " NoBN "
+suptitle += " lr:{} ".format(base_lrate)
+suptitle += " bs:{} ".format(batch_size)
+suptitle += activation
+if use_shortcut:
+    suptitle += " shortcut "
+suptitle += '_' + str(run_id)
+filename = 'fitnet' + suptitle.replace(' ','_')
+
 
 print("Loading the dataset")
 (x_train, y_train), (x_test, y_test) = cifar100.load_data(label_mode='fine')
@@ -235,7 +254,8 @@ class TestCallback(Callback):
         print('\nTesting loss: {}, acc: {}\n'.format(loss, acc))
 
 test_cb = TestCallback((x_test, y_test))
-
+checkpoint_cb = ModelCheckpoint('weights/'+ filename + '.h5',
+                                save_best_only=True)
 if use_dataset_augmentation:
     # With data augmentation
     datagen = ImageDataGenerator(width_shift_range=5./img_width,
@@ -247,14 +267,14 @@ if use_dataset_augmentation:
                                   steps_per_epoch=len(x_train)/batch_size,
                                   epochs =150,
                                   validation_data=(x_val, y_val),
-                                  callbacks=[lr_sched, test_cb])
+                                  callbacks=[lr_sched, test_cb, checkpoint_cb])
 else:
     # Without data augmentation
     history = model.fit(x_train, y_train,\
                         epochs=150,\
                         batch_size=batch_size, \
                         validation_data=(x_val, y_val),
-                        callbacks=[lr_sched, test_cb])
+                        callbacks=[lr_sched, test_cb, checkpoint_cb])
 
 score = model.evaluate(x_test, y_test, verbose=0)
 print('Test loss:', score[0])
@@ -285,22 +305,8 @@ plt.title('model loss')
 plt.ylabel('loss')
 plt.xlabel('epoch')
 plt.legend(['train', 'val', 'test'], loc='center right')
-
-suptitle = "v2 "
-if use_dataset_augmentation:
-    suptitle += " DatasetAugment "
-if use_dropout:
-    suptitle += " Dropout"
-if not use_bn:
-    suptitle += " NoBN "
-suptitle += " lr:{} ".format(base_lrate)
-suptitle += " bs:{} ".format(batch_size)
-suptitle += activation
-suptitle += " shortcut "
-suptitle += '_' + str(run_id)
 plt.suptitle(suptitle)
-filename = 'fitnet' + suptitle.replace(' ','_')
+
 plt.savefig(filename + ".pdf", bbox_inches='tight')
 
 
-model.save('weights/'+ filename + '.h5')
