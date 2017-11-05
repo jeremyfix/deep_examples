@@ -201,7 +201,7 @@ if use_dropout:
 yo = Dense(num_classes, activation='softmax', kernel_initializer=kernel_initializer)(x)
 
 model = Model(inputs=[xi], outputs=[yo])
-optimizer = SGD(lr=0.01, momentum=0.9)
+optimizer = SGD(lr=base_lrate, momentum=0.9)
 
 def lr_rate(epoch):
     if(epoch <= 50):
