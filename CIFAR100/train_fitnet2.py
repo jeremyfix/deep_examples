@@ -233,7 +233,7 @@ if use_dataset_augmentation:
     datagen.fit(x_train)
     history = model.fit_generator(datagen.flow(x_train, y_train, batch_size=batch_size),
                                   steps_per_epoch=len(x_train)/batch_size,
-                                  epochs =230,
+                                  epochs =150,
                                   validation_data=(x_val, y_val),
                                   callbacks=[lr_sched, test_cb])
 else:
