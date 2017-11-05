@@ -4,6 +4,41 @@ from keras.utils import to_categorical
 import numpy as np
 import sys
 import h5py
+### python3 model_avg.py weights/fitnet_DatasetAugment__Dropout_lr\:0.01_elu_1.h5 weights/fitnet_DatasetAugment__Dropout_lr\:0.01_elu_2.h5 weights/fitnet_DatasetAugment__Dropout_lr\:0.01_elu_3.h5 weights/fitnet_DatasetAugment__Dropout_lr\:0.01_elu_4.h5
+
+# Computing the predictions of weights/fitnet_DatasetAugment__Dropout_lr:0.01_elu_1.h5
+# Model 0 : Loss=1.28745703125, Accuracy=0.7008
+# Computing the predictions of weights/fitnet_DatasetAugment__Dropout_lr:0.01_elu_2.h5
+# Model 1 : Loss=1.2647326171875, Accuracy=0.706
+# Computing the predictions of weights/fitnet_DatasetAugment__Dropout_lr:0.01_elu_3.h5
+# Model 2 : Loss=1.28125048828125, Accuracy=0.7064
+# Computing the predictions of weights/fitnet_DatasetAugment__Dropout_lr:0.01_elu_4.h5
+# Model 3 : Loss=1.27666083984375, Accuracy=0.7036
+# (10000, 100)
+# Avg Model : Loss=0.9127634765625, Accuracy=0.7536
+
+## ls weights/*.h5 | tr "\n" " " | xargs python3 model_avg.py
+
+## Model 0 : Loss=1.50749921875, Accuracy=0.665
+# Computing the predictions of weights/fitnet_DatasetAugment__Dropout_lr:0.01__bs:128_elu_1.h5
+# Model 1 : Loss=1.24549033203125, Accuracy=0.6957
+# Computing the predictions of weights/fitnet_DatasetAugment__Dropout_lr:0.01__bs:128_elu_2.h5
+# Model 2 : Loss=1.251601171875, Accuracy=0.696
+# Computing the predictions of weights/fitnet_DatasetAugment__Dropout_lr:0.01__bs:32_elu_shortcut__1.h5
+# Model 3 : Loss=1.37888984375, Accuracy=0.7072
+# Computing the predictions of weights/fitnet_DatasetAugment__Dropout_lr:0.01__bs:32_elu_shortcut__2.h5
+# Model 4 : Loss=1.3450056640625, Accuracy=0.7062
+# Computing the predictions of weights/fitnet_DatasetAugment__Dropout_lr:0.01_elu_1.h5
+# Model 5 : Loss=1.28745703125, Accuracy=0.7008
+# Computing the predictions of weights/fitnet_DatasetAugment__Dropout_lr:0.01_elu_2.h5
+# Model 6 : Loss=1.2647326171875, Accuracy=0.706
+# Computing the predictions of weights/fitnet_DatasetAugment__Dropout_lr:0.01_elu_3.h5
+# Model 7 : Loss=1.28125048828125, Accuracy=0.7064
+# Computing the predictions of weights/fitnet_DatasetAugment__Dropout_lr:0.01_elu_4.h5
+# Model 8 : Loss=1.27666083984375, Accuracy=0.7036
+# (10000, 100)
+# Avg Model : Loss=0.8409693359375, Accuracy=0.7664
+
 
 if len(sys.argv) <= 1:
     print("Usage : {} model1.h5 model2.h5 ...".format(sys.argv[0]))
@@ -44,4 +79,4 @@ predictions = np.array(predictions)
 pred_avg = np.mean(predictions, axis=0)
 print(pred_avg.shape)
 scores = acc_loss(pred_avg, y_test)
-print("Avg Model : Loss={}, Accuracy={}".format(scores[0], scores[1]))
+print("Avg of {} models: Loss={}, Accuracy={}".format(predictions.shape[0], scores[0], scores[1]))
