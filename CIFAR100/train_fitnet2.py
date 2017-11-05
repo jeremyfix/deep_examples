@@ -182,8 +182,6 @@ if use_shortcut:
     x_prev = Activation(activation)(x_prev)
     x = add([x_prev, x])
 
-x = MaxPooling2D(pool_size=(2,2), strides=(2,2))(x)
-
 x = GlobalAveragePooling2D()(x)
 x = Dense(500, activation=activation, kernel_initializer=kernel_initializer)(x)
 if use_dropout:
@@ -194,14 +192,12 @@ model = Model(inputs=[xi], outputs=[yo])
 optimizer = SGD(lr=0.01, momentum=0.9)
 
 def lr_rate(epoch):
-    if(epoch <= 100):
+    if(epoch <= 50):
         return base_lrate
-    elif(epoch <= 150):
+    elif(epoch <= 100):
         return base_lrate/1e1
-    elif(epoch <= 200):
+    elif(epoch <= 150):
         return base_lrate/1e2
-    else:
-        return base_lrate/1e3
     
 lr_sched = LearningRateScheduler(lr_rate)
 
@@ -243,7 +239,7 @@ if use_dataset_augmentation:
 else:
     # Without data augmentation
     history = model.fit(x_train, y_train,\
-                        epochs=230,\
+                        epochs=150,\
                         batch_size=batch_size, \
                         validation_data=(x_val, y_val),
                         callbacks=[lr_sched, test_cb])
@@ -258,7 +254,7 @@ plt.subplot(121)
 plt.plot(history.history['acc'])
 plt.plot(history.history['val_acc'])
 plt.plot(test_cb.test_history['acc'])
-for e in [100, 150, 200]:
+for e in [50, 100]:
     plt.axvline(e, linewidth=2, linestyle='--', color='r')
 
 plt.title('model accuracy')
