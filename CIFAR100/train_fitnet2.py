@@ -182,6 +182,18 @@ if use_shortcut:
     x_prev = Activation(activation)(x_prev)
     x = add([x_prev, x])
 
+
+x_prev = x
+for i in range(2):
+    x = Conv2D(filters=256, kernel_size=3, strides=1, padding='same', kernel_initializer=kernel_initializer, kernel_regularizer=kernel_regularizer)(x)
+    if use_bn:
+        x = BatchNormalization()(x)
+    x = Activation(activation)(x)
+if use_shortcut:
+    x_prev = Conv2D(filters=256, kernel_size=1, strides=1, padding='same', kernel_initializer=kernel_initializer, kernel_regularizer=kernel_regularizer)(x_prev)
+    x_prev = Activation(activation)(x_prev)
+    x = add([x_prev, x])
+
 x = GlobalAveragePooling2D()(x)
 x = Dense(500, activation=activation, kernel_initializer=kernel_initializer)(x)
 if use_dropout:
