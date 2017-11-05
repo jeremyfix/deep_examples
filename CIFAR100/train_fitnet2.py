@@ -148,7 +148,7 @@ else:
     kernel_regularizer=None
 
 x_prev = x
-for i in range(3):
+for i in range(2):
     x = Conv2D(filters=32, kernel_size=3, strides=1, padding='same', kernel_initializer=kernel_initializer, kernel_regularizer=kernel_regularizer)(x)
     if use_bn:
         x = BatchNormalization()(x)
@@ -159,7 +159,7 @@ if use_shortcut:
     x = add([x_prev, x])
 
 x_prev = x
-for i in range(3):
+for i in range(2):
     x = Conv2D(filters=64, kernel_size=3, strides=1, padding='same', kernel_initializer=kernel_initializer, kernel_regularizer=kernel_regularizer)(x)
     if use_bn:
         x = BatchNormalization()(x)
@@ -172,7 +172,7 @@ if use_shortcut:
 x = MaxPooling2D(pool_size=(2,2), strides=(2,2))(x)
 
 x_prev = x
-for i in range(3):
+for i in range(2):
     x = Conv2D(filters=128, kernel_size=3, strides=1, padding='same', kernel_initializer=kernel_initializer, kernel_regularizer=kernel_regularizer)(x)
     if use_bn:
         x = BatchNormalization()(x)
