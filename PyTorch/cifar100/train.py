@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import torch.nn.init as init
 from torch.optim import lr_scheduler
 from torch.autograd import Variable
 
@@ -19,7 +20,7 @@ batch_size = 64
 classnames = ['apple', 'aquarium_fish', 'baby', 'bear', 'beaver', 'bed', 'bee', 'beetle', 'bicycle', 'bottle', 'bowl', 'boy', 'bridge', 'bus', 'butterfly', 'camel', 'can', 'castle', 'caterpillar', 'cattle', 'chair', 'chimpanzee', 'clock', 'cloud', 'cockroach', 'couch', 'crab', 'crocodile', 'cup', 'dinosaur', 'dolphin', 'elephant', 'flatfish', 'forest', 'fox', 'girl', 'hamster', 'house', 'kangaroo', 'keyboard', 'lamp', 'lawn_mower', 'leopard', 'lion', 'lizard', 'lobster', 'man', 'maple_tree', 'motorcycle', 'mountain', 'mouse', 'mushroom', 'oak_tree', 'orange', 'orchid', 'otter', 'palm_tree', 'pear', 'pickup_truck', 'pine_tree', 'plain', 'plate', 'poppy', 'porcupine', 'possum', 'rabbit', 'raccoon', 'ray', 'road', 'rocket', 'rose', 'sea', 'seal', 'shark', 'shrew', 'skunk', 'skyscraper', 'snail', 'snake', 'spider', 'squirrel', 'streetcar', 'sunflower', 'sweet_pepper', 'table', 'tank', 'telephone', 'television', 'tiger', 'tractor', 'train', 'trout', 'tulip', 'turtle', 'wardrobe', 'whale', 'willow_tree', 'wolf', 'woman', 'worm']
 
 
-# trainset = datasets.CIFAR100(train=True, root="/home/fix_jer/Datasets/", download=True)
+# trainset = datasets.CIFAR100(train=True, root="/usr/users/ims/fix_jer/Datasets/", download=True)
 
 # mean = trainset.train_data.mean(axis=0)/255
 # std = trainset.train_data.std(axis=0)/255
@@ -42,13 +43,13 @@ data_transforms = {
     ])
 }
 
-trainset = datasets.CIFAR100(train=True, root="/home/fix_jer/Datasets/", download=True, transform=data_transforms['train'])
+trainset = datasets.CIFAR100(train=True, root="/usr/users/ims/fix_jer/Datasets/", download=True, transform=data_transforms['train'])
 
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=2)
 
 use_gpu = torch.cuda.is_available()
 if use_gpu:
-    print("Using GPU: {}".torch.cuda.get_device_name())
+    print("Using GPU{}".format(torch.cuda.current_device()))
 else:
     print("Using CPU")
     
@@ -78,6 +79,7 @@ class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(  3, 32, 3, padding=1)
+        nn.init.xavier_uniform(self.conv1.weight, gain=nn.init.calculate_gain('relu'))
         self.bn1   = nn.BatchNorm2d(32)
         self.conv2 = nn.Conv2d( 32, 64, 3, padding=1)
         self.bn2   = nn.BatchNorm2d(64)
@@ -100,7 +102,8 @@ class Net(nn.Module):
         x = x.view(-1, self.num_flat_features(x))
         x = F.elu(self.fc1(x))
         x = self.drop(x)
-        x = F.softmax(self.fc2(x))
+        x = self.fc2(x)
+		# x = F.softmax(x) <-- useless if CrossEntropyLoss is used
         return x
 
     def num_flat_features(self, x):
@@ -116,6 +119,9 @@ class Net(nn.Module):
 base_lrate = 0.01
 
 net = Net()
+if(use_gpu):
+    net.cuda()
+
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(),
                       lr=base_lrate,
@@ -132,14 +138,14 @@ for epoch in range(200):  # loop over the dataset multiple times
     for i, data in enumerate(trainloader, 0):
         # get the inputs
         inputs, labels = data
-
+		
         # wrap them in Variable
         if use_gpu:
-            inputs = Variable(inputs.cuda())
-            labels = Variable(labels.cuda())
-        else:
-            inputs = Variable(inputs)
-            labels = Variable(labels)
+            inputs = inputs.cuda()
+            labels = labels.cuda()
+        
+        inputs = Variable(inputs)
+        labels = Variable(labels)
         
         # zero the parameter gradients
         optimizer.zero_grad()
@@ -152,9 +158,9 @@ for epoch in range(200):  # loop over the dataset multiple times
 
         # print statistics
         running_loss += loss.data[0]
-        if i % 2000 == 1999:    # print every 2000 mini-batches
+        if i % 100 == 99:    # print every 2000 mini-batches
             print('[%d, %5d] loss: %.3f' %
-                  (epoch + 1, i + 1, running_loss / 2000))
+                  (epoch + 1, i + 1, running_loss / 100))
             running_loss = 0.0
 
 print('Finished Training')
