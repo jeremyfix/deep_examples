@@ -77,18 +77,31 @@ class Net(nn.Module):
 
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2D(  3, 32, 3, padding=1)
-        self.conv2 = nn.Conv2D( 32, 64, 3, padding=1)
-        self.conv3 = nn.Conv2D( 64,128, 3, padding=1)
-        self.conv4 = nn.Conv2D(128,256, 3, padding=1)
-        self.fc1   = nn.Linear( 64, 500)
+        self.conv1 = nn.Conv2d(  3, 32, 3, padding=1)
+        self.bn1   = nn.BatchNorm2d(32)
+        self.conv2 = nn.Conv2d( 32, 64, 3, padding=1)
+        self.bn2   = nn.BatchNorm2d(64)
+        self.conv3 = nn.Conv2d( 64,128, 3, padding=1)
+        self.bn3   = nn.BatchNorm2d(128)
+        self.conv4 = nn.Conv2d(128,256, 3, padding=1)
+        self.bn4   = nn.BatchNorm2d(256)
+        self.fc1   = nn.Linear(256, 500)
+        self.drop  = nn.Dropout2d(0.5)
         self.fc2   = nn.Linear(500, 100)
 
         
     def forward(self, x):
-        x = self.conv1(x)
-        
-        x = self.conv2(x)
+        x = F.elu(self.bn1(self.conv1(x)))
+        x = F.elu(self.bn2(self.conv2(x)))
+        x = F.max_pool2d(x, 2)
+        x = F.elu(self.bn3(self.conv3(x)))
+        x = F.elu(self.bn4(self.conv4(x)))
+        x = F.avg_pool2d(x, 16)
+        x = x.view(-1, self.num_flat_features(x))
+        x = F.elu(self.fc1(x))
+        x = self.drop(x)
+        x = F.softmax(self.fc2(x))
+        return x
 
     def num_flat_features(self, x):
         size = x.size()[1:]
@@ -99,3 +112,49 @@ class Net(nn.Module):
 
 
 # Base lrate : 0.01
+
+base_lrate = 0.01
+
+net = Net()
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.SGD(net.parameters(),
+                      lr=base_lrate,
+                      momentum=0.9,
+                      nesterov=True)
+scheduler = optim.lr_scheduler.StepLR(optimizer,
+                                      step_size=50,
+                                      gamma=0.1)
+
+for epoch in range(200):  # loop over the dataset multiple times
+
+    running_loss = 0.0
+    scheduler.step()
+    for i, data in enumerate(trainloader, 0):
+        # get the inputs
+        inputs, labels = data
+
+        # wrap them in Variable
+        if use_gpu:
+            inputs = Variable(inputs.cuda())
+            labels = Variable(labels.cuda())
+        else:
+            inputs = Variable(inputs)
+            labels = Variable(labels)
+        
+        # zero the parameter gradients
+        optimizer.zero_grad()
+
+        # forward + backward + optimize
+        outputs = net(inputs)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+        # print statistics
+        running_loss += loss.data[0]
+        if i % 2000 == 1999:    # print every 2000 mini-batches
+            print('[%d, %5d] loss: %.3f' %
+                  (epoch + 1, i + 1, running_loss / 2000))
+            running_loss = 0.0
+
+print('Finished Training')
