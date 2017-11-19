@@ -9,6 +9,8 @@ from torch.autograd import Variable
 import torchvision
 from torchvision import datasets, transforms
 
+from utils import progress_bar, torch_summarize
+
 import matplotlib
 import matplotlib.pyplot as plt
 plt.style.use('ggplot')
@@ -17,10 +19,13 @@ import numpy as np
 
 batch_size = 64
 
+dataset_path = "/home/fix_jer/Datasets"
+#dataset_path = "/usr/users/ims/fix_jer/Datasets"
+
 classnames = ['apple', 'aquarium_fish', 'baby', 'bear', 'beaver', 'bed', 'bee', 'beetle', 'bicycle', 'bottle', 'bowl', 'boy', 'bridge', 'bus', 'butterfly', 'camel', 'can', 'castle', 'caterpillar', 'cattle', 'chair', 'chimpanzee', 'clock', 'cloud', 'cockroach', 'couch', 'crab', 'crocodile', 'cup', 'dinosaur', 'dolphin', 'elephant', 'flatfish', 'forest', 'fox', 'girl', 'hamster', 'house', 'kangaroo', 'keyboard', 'lamp', 'lawn_mower', 'leopard', 'lion', 'lizard', 'lobster', 'man', 'maple_tree', 'motorcycle', 'mountain', 'mouse', 'mushroom', 'oak_tree', 'orange', 'orchid', 'otter', 'palm_tree', 'pear', 'pickup_truck', 'pine_tree', 'plain', 'plate', 'poppy', 'porcupine', 'possum', 'rabbit', 'raccoon', 'ray', 'road', 'rocket', 'rose', 'sea', 'seal', 'shark', 'shrew', 'skunk', 'skyscraper', 'snail', 'snake', 'spider', 'squirrel', 'streetcar', 'sunflower', 'sweet_pepper', 'table', 'tank', 'telephone', 'television', 'tiger', 'tractor', 'train', 'trout', 'tulip', 'turtle', 'wardrobe', 'whale', 'willow_tree', 'wolf', 'woman', 'worm']
 
 
-# trainset = datasets.CIFAR100(train=True, root="/usr/users/ims/fix_jer/Datasets/", download=True)
+# trainset = datasets.CIFAR100(train=True, root=dataset_path, download=True)
 
 # mean = trainset.train_data.mean(axis=0)/255
 # std = trainset.train_data.std(axis=0)/255
@@ -43,7 +48,7 @@ data_transforms = {
     ])
 }
 
-trainset = datasets.CIFAR100(train=True, root="/usr/users/ims/fix_jer/Datasets/", download=True, transform=data_transforms['train'])
+trainset = datasets.CIFAR100(train=True, root=dataset_path, download=True, transform=data_transforms['train'])
 
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=2)
 
@@ -74,12 +79,23 @@ else:
 # Convolution blocks : Conv - BN - ELU
 # C3s1 x 32, C3s1 x 64, Max2s2, C3s1x128, C3s1x256, GlobalAvg, Dense(500), Dropout(0.5), Dense(100), Softmax
 
+def weights_init(m):
+    classname = m.__class__.__name__
+    if 'Conv' in classname:
+        nn.init.xavier_uniform(m.weight.data, gain=nn.init.calculate_gain('relu'))
+        m.bias.data.fill_(0)
+    elif 'Linear' in classname:
+        nn.init.xavier_uniform(m.weight.data, gain=nn.init.calculate_gain('relu'))
+        m.bias.data.fill_(0)
+        
+    
+
 class Net(nn.Module):
 
     def __init__(self):
         super(Net, self).__init__()
+
         self.conv1 = nn.Conv2d(  3, 32, 3, padding=1)
-        nn.init.xavier_uniform(self.conv1.weight, gain=nn.init.calculate_gain('relu'))
         self.bn1   = nn.BatchNorm2d(32)
         self.conv2 = nn.Conv2d( 32, 64, 3, padding=1)
         self.bn2   = nn.BatchNorm2d(64)
@@ -121,46 +137,54 @@ base_lrate = 0.01
 net = Net()
 if(use_gpu):
     net.cuda()
+net.apply(weights_init)
+
+#print("{} learnable parameters", len(net.parameters()))
+print(torch_summarize(net))
 
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(),
                       lr=base_lrate,
                       momentum=0.9,
-                      nesterov=True)
+                      nesterov=True,
+                      weight_decay=5e-4)
 scheduler = optim.lr_scheduler.StepLR(optimizer,
                                       step_size=50,
                                       gamma=0.1)
 
 for epoch in range(200):  # loop over the dataset multiple times
 
-    running_loss = 0.0
+    train_loss = 0.0
+    correct = 0
+    total = 0
+    
     scheduler.step()
-    for i, data in enumerate(trainloader, 0):
-        # get the inputs
-        inputs, labels = data
+    for batch_idx, (inputs, targets) in enumerate(trainloader, 0):
 		
         # wrap them in Variable
         if use_gpu:
-            inputs = inputs.cuda()
-            labels = labels.cuda()
+            inputs, targets = inputs.cuda(), targets.cuda()
         
-        inputs = Variable(inputs)
-        labels = Variable(labels)
+        inputs, targets = Variable(inputs), Variable(targets)
         
         # zero the parameter gradients
         optimizer.zero_grad()
 
         # forward + backward + optimize
         outputs = net(inputs)
-        loss = criterion(outputs, labels)
+        loss = criterion(outputs, targets)
         loss.backward()
         optimizer.step()
 
         # print statistics
-        running_loss += loss.data[0]
-        if i % 100 == 99:    # print every 2000 mini-batches
-            print('[%d, %5d] loss: %.3f' %
-                  (epoch + 1, i + 1, running_loss / 100))
-            running_loss = 0.0
+        train_loss += loss.data[0]
+        _, predicted = torch.max(outputs.data, 1)
+        total += targets.size(0)
+        correct += predicted.eq(targets.data).cpu().sum()
+        
+        progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
+% (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
+    # At the end of an epoch, we compute the metrics on the validation set
+    # To be done
 
 print('Finished Training')
