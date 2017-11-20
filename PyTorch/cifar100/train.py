@@ -64,6 +64,10 @@ print("{} samples in the validation set".format(len(valset)))
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=2)
 valloader = torch.utils.data.DataLoader(valset, batch_size=batch_size, shuffle=False, num_workers=2)
 
+testset = datasets.CIFAR100(train=False, root=dataset_path, download=True, transform=data_transforms['test'])
+testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=2)
+
+
 use_gpu = torch.cuda.is_available()
 if use_gpu:
     print("Using GPU{}".format(torch.cuda.current_device()))
@@ -164,11 +168,17 @@ scheduler = optim.lr_scheduler.StepLR(optimizer,
                                       step_size=50,
                                       gamma=0.1)
 
-for epoch in range(200):  # loop over the dataset multiple times
+train_metrics_history = {'times': [], 'loss':[], 'acc':[]}
+val_metrics_history = {'times': [], 'loss':[], 'acc':[]}
+
+for epoch in range(2):  # loop over the dataset multiple times
 
     train_loss = 0.0
     correct = 0
     total = 0
+
+    # Switch the network to the training mode
+    net.train()
     
     scheduler.step()
     for batch_idx, (inputs, targets) in enumerate(trainloader, 0):
@@ -193,10 +203,17 @@ for epoch in range(200):  # loop over the dataset multiple times
         _, predicted = torch.max(outputs.data, 1)
         total += targets.size(0)
         correct += predicted.eq(targets.data).cpu().sum()
+
+        train_metrics_history['times'].append(epoch * len(trainloader) + total)
+        train_metrics_history['acc'].append(correct/float(total))
+        train_metrics_history['loss'].append(train_loss)
         
         progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)' % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
     
-    # At the end of an epoch, we compute the metrics on the validation set
+    ##### At the end of an epoch, we compute the metrics on the validation set
+
+    # Switch the network to the testing mode
+    net.test()
     val_loss = 0.0
     correct = 0
     total = 0
@@ -214,6 +231,35 @@ for epoch in range(200):  # loop over the dataset multiple times
         _, predicted = torch.max(outputs.data, 1)
         total += targets.size(0)
         correct += predicted.eq(targets.data).cpu().sum()
-        print("Validation:   Loss : %.3f | Acc : %.3f%%"% (val_loss/valloader, 100.*correct/total))
+    print("Validation:   Loss : %.3f | Acc : %.3f%%"% (val_loss/len(valloader), 100.*correct/total))
 
+    val_metrics_history['times'].append((epoch+1) * len(trainloader))
+    val_metrics_history['acc'].append(correct/float(total))
+    val_metrics_history['loss'].append(val_loss)
+
+        
 print('Finished Training')
+
+
+# Switch the network to the testing mode
+net.test()
+test_loss = 0.0
+correct = 0
+total = 0
+for batch_idx, (inputs, targets) in enumerate(testloader, 0):
+    # wrap them in Variable
+    if use_gpu:
+        inputs, targets = inputs.cuda(), targets.cuda()
+        
+    inputs, targets = Variable(inputs), Variable(targets)
+    # forward + backward + optimize
+    outputs = net(inputs)
+    
+    # print statistics
+    test_loss += loss.data[0]
+    _, predicted = torch.max(outputs.data, 1)
+    total += targets.size(0)
+    correct += predicted.eq(targets.data).cpu().sum()
+print("Test:   Loss : %.3f | Acc : %.3f%%"% (test_loss/len(testloader), 100.*correct/total))
+
+
