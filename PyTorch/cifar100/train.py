@@ -260,6 +260,30 @@ for batch_idx, (inputs, targets) in enumerate(testloader, 0):
     _, predicted = torch.max(outputs.data, 1)
     total += targets.size(0)
     correct += predicted.eq(targets.data).cpu().sum()
-print("Test:   Loss : %.3f | Acc : %.3f%%"% (test_loss/len(testloader), 100.*correct/total))
+test_acc = 100.*correct/total
+test_loss = test_loss/len(testloader)
+print("Test:   Loss : %.3f | Acc : %.3f%%"% (test_loss, test_acc))
 
 
+
+
+plt.figure()
+
+plt.subplot(121)
+plt.plot(train_metrics_history['times'], train_metrics_history['acc'])
+plt.plot(val_metrics_history['times'], val_metrics_history['acc'])
+plt.title('Model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('Num samples')
+plt.legend(['train', 'val'], loc='center right')
+
+plt.subplot(122)
+plt.plot(train_metrics_history['times'], train_metrics_history['loss'])
+plt.plot(val_metrics_history['times'], val_metrics_history['loss'])
+plt.title('Model loss')
+plt.ylabel('loss')
+plt.xlabel('Num samples')
+plt.legend(['train', 'val'], loc='center right')
+plt.suptitle("Test : Loss:%.3f | Acc : %.3f%%" % (test_loss, test_acc))
+
+plt.savefig("expe.pdf", bbox_inches='tight')
