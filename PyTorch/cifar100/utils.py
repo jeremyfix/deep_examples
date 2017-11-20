@@ -120,3 +120,44 @@ def torch_summarize(model, show_weights=True, show_parameters=True):
     tmpstr = tmpstr + ')'
     tmpstr += '\n {} learnable parameters'.format(total_params)
     return tmpstr
+
+
+import torch.utils.data as data
+class SplitDataset(data.Dataset):
+    """
+
+    All other datasets should subclass it. All subclasses should override
+    ``__len__``, that provides the size of the dataset, and ``__getitem__``,
+    supporting integer indexing in range from 0 to len(self) exclusive.
+    """
+
+    def __init__(self, base_dataset, which_to_keep):
+        self.base_dataset = base_dataset
+        self.which_to_keep = which_to_keep
+    
+    def __getitem__(self, index):
+        """
+        Args:
+            index (int): Index
+        Returns:
+            tuple: (image, target) where target is index of the target class.
+        """
+        return self.base_dataset[self.which_to_keep[index]]
+
+    def __len__(self):
+        return len(self.which_to_keep)
+
+    def __add__(self, other):
+        return data.ConcatDataset([self, other])
+
+def split(base_dataset, num_first_set):
+    """
+    Takes a dataset as input
+    And splits it into two dataset with num_first_set elements
+    in the first dataset
+    """
+    # We generate a list of indexes for the two datasets
+    p = np.random.permutation(len(base_dataset))
+    first_indexes = list(p[:num_first_set])
+    second_indexes = list(p[num_first_set:])
+    return SplitDataset(base_dataset, first_indexes), SplitDataset(base_dataset, second_indexes)

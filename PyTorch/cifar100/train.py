@@ -9,7 +9,7 @@ from torch.autograd import Variable
 import torchvision
 from torchvision import datasets, transforms
 
-from utils import progress_bar, torch_summarize
+from utils import progress_bar, torch_summarize, split
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -42,15 +42,27 @@ data_transforms = {
         transforms.ToTensor(),
         transforms.Normalize(mean, std)
     ]),
+    'val': transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std)
+    ]),   
     'test': transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(mean, std)
     ])
 }
 
-trainset = datasets.CIFAR100(train=True, root=dataset_path, download=True, transform=data_transforms['train'])
+
+    
+base_trainset = datasets.CIFAR100(train=True, root=dataset_path, download=True, transform=data_transforms['train'])
+
+trainset, valset = split(base_trainset, 40000)
+
+print("{} samples in the training set".format(len(trainset)))
+print("{} samples in the validation set".format(len(valset)))
 
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=2)
+valloader = torch.utils.data.DataLoader(valset, batch_size=batch_size, shuffle=False, num_workers=2)
 
 use_gpu = torch.cuda.is_available()
 if use_gpu:
@@ -182,9 +194,26 @@ for epoch in range(200):  # loop over the dataset multiple times
         total += targets.size(0)
         correct += predicted.eq(targets.data).cpu().sum()
         
-        progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-% (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
+        progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)' % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
+    
     # At the end of an epoch, we compute the metrics on the validation set
-    # To be done
+    val_loss = 0.0
+    correct = 0
+    total = 0
+    for batch_idx, (inputs, targets) in enumerate(valloader, 0):
+        # wrap them in Variable
+        if use_gpu:
+            inputs, targets = inputs.cuda(), targets.cuda()
+        
+        inputs, targets = Variable(inputs), Variable(targets)
+        # forward + backward + optimize
+        outputs = net(inputs)
+        
+        # print statistics
+        val_loss += loss.data[0]
+        _, predicted = torch.max(outputs.data, 1)
+        total += targets.size(0)
+        correct += predicted.eq(targets.data).cpu().sum()
+        print("Validation:   Loss : %.3f | Acc : %.3f%%"% (val_loss/valloader, 100.*correct/total))
 
 print('Finished Training')
