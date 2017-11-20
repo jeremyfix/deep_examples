@@ -150,14 +150,16 @@ class SplitDataset(data.Dataset):
     def __add__(self, other):
         return data.ConcatDataset([self, other])
 
-def split(base_dataset, num_first_set):
+def split(base_dataset, num_first_set, transform1, transform2):
     """
     Takes a dataset as input
     And splits it into two dataset with num_first_set elements
     in the first dataset
     """
     # We generate a list of indexes for the two datasets
-    p = np.random.permutation(len(base_dataset))
+    set1 = base_dataset(transform1)
+    set2 = base_dataset(transform2)
+    p = np.random.permutation(len(set1))
     first_indexes = list(p[:num_first_set])
     second_indexes = list(p[num_first_set:])
-    return SplitDataset(base_dataset, first_indexes), SplitDataset(base_dataset, second_indexes)
+    return SplitDataset(set1, first_indexes), SplitDataset(set2, second_indexes)

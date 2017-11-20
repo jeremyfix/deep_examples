@@ -56,9 +56,9 @@ data_transforms = {
 
 
     
-base_trainset = datasets.CIFAR100(train=True, root=dataset_path, download=True, transform=data_transforms['train'])
+base_trainset = lambda trans: datasets.CIFAR100(train=True, root=dataset_path, download=True, transform=trans)
 
-trainset, valset = split(base_trainset, 40000)
+trainset, valset = split(base_trainset, 40000, data_transforms['train'], data_transforms['val'])
 
 print("{} samples in the training set".format(len(trainset)))
 print("{} samples in the validation set".format(len(valset)))
@@ -113,26 +113,48 @@ class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
 
-        self.conv1 = nn.Conv2d(  3, 32, 3, padding=1)
-        self.bn1   = nn.BatchNorm2d(32)
-        self.conv2 = nn.Conv2d( 32, 64, 3, padding=1)
-        self.bn2   = nn.BatchNorm2d(64)
-        self.conv3 = nn.Conv2d( 64,128, 3, padding=1)
-        self.bn3   = nn.BatchNorm2d(128)
-        self.conv4 = nn.Conv2d(128,256, 3, padding=1)
-        self.bn4   = nn.BatchNorm2d(256)
+        self.conv10 = nn.Conv2d(  3, 32, 3, padding=1)
+        self.bn10   = nn.BatchNorm2d(32)
+        self.conv11 = nn.Conv2d( 32, 32, 3, padding=1)
+        self.bn11   = nn.BatchNorm2d(32)
+        
+        self.conv20 = nn.Conv2d( 32, 64, 3, padding=1)
+        self.bn20   = nn.BatchNorm2d(64)
+        self.conv21 = nn.Conv2d( 64, 64, 3, padding=1)
+        self.bn21   = nn.BatchNorm2d(64)
+        
+        self.conv30 = nn.Conv2d( 64,128, 3, padding=1)
+        self.bn30   = nn.BatchNorm2d(128)
+        self.conv31 = nn.Conv2d(128,128, 3, padding=1)
+        self.bn31   = nn.BatchNorm2d(128)
+        
+        self.conv40 = nn.Conv2d(128,256, 3, padding=1)
+        self.bn40   = nn.BatchNorm2d(256)
+        self.conv41 = nn.Conv2d(256,256, 3, padding=1)
+        self.bn41   = nn.BatchNorm2d(256)
+        
         self.fc1   = nn.Linear(256, 500)
         self.drop  = nn.Dropout2d(0.5)
         self.fc2   = nn.Linear(500, 100)
 
         
     def forward(self, x):
-        x = F.elu(self.bn1(self.conv1(x)))
-        x = F.elu(self.bn2(self.conv2(x)))
+        x = F.elu(self.bn10(self.conv10(x)))
+        x = F.elu(self.bn11(self.conv11(x)))
+        
+        x = F.elu(self.bn20(self.conv20(x)))
+        x = F.elu(self.bn21(self.conv21(x)))
+        
         x = F.max_pool2d(x, 2)
-        x = F.elu(self.bn3(self.conv3(x)))
-        x = F.elu(self.bn4(self.conv4(x)))
+        
+        x = F.elu(self.bn30(self.conv30(x)))
+        x = F.elu(self.bn31(self.conv31(x)))
+        
+        x = F.elu(self.bn40(self.conv40(x)))
+        x = F.elu(self.bn41(self.conv41(x)))
+        
         x = F.avg_pool2d(x, 16)
+        
         x = x.view(-1, self.num_flat_features(x))
         x = F.elu(self.fc1(x))
         x = self.drop(x)
@@ -174,7 +196,8 @@ scheduler = optim.lr_scheduler.StepLR(optimizer,
 train_metrics_history = {'times': [], 'loss':[], 'acc':[]}
 val_metrics_history = {'times': [], 'loss':[], 'acc':[]}
 
-for epoch in range(200):  # loop over the dataset multiple times
+max_epochs = 200
+for epoch in range(max_epochs):  # loop over the dataset multiple times
 
     train_loss = 0.0
     correct = 0
@@ -207,7 +230,7 @@ for epoch in range(200):  # loop over the dataset multiple times
         total += targets.size(0)
         correct += predicted.eq(targets.data).cpu().sum()
 
-        train_metrics_history['times'].append(epoch * len(trainloader) * batch_size + total)
+        train_metrics_history['times'].append(epoch + float(total)/(len(trainloader) * batch_size))
         train_metrics_history['acc'].append(correct/float(total))
         train_metrics_history['loss'].append(train_loss/total)
         
@@ -236,9 +259,9 @@ for epoch in range(200):  # loop over the dataset multiple times
         correct += predicted.eq(targets.data).cpu().sum()
     val_loss = val_loss/total
     val_acc = correct/float(total)
-    print("Validation:   Loss : %.3f | Acc : %.3f%%"% (val_loss, 100.*val_acc))
+    print("[%d/%d] Validation:   Loss : %.3f | Acc : %.3f%%"% (epoch, max_epochs, val_loss, 100.*val_acc))
 
-    val_metrics_history['times'].append((epoch+1) * len(trainloader) * batch_size)
+    val_metrics_history['times'].append(epoch+1)
     val_metrics_history['acc'].append(val_acc)
     val_metrics_history['loss'].append(val_loss)
 
