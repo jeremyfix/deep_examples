@@ -12,6 +12,8 @@ from torchvision import datasets, transforms
 from utils import progress_bar, torch_summarize, split
 
 import matplotlib
+# Force matplotlib to not use any Xwindows backend.
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 plt.style.use('ggplot')
 
@@ -19,8 +21,8 @@ import numpy as np
 
 batch_size = 64
 
-dataset_path = "/home/fix_jer/Datasets"
-#dataset_path = "/usr/users/ims/fix_jer/Datasets"
+#dataset_path = "/home/fix_jer/Datasets"
+dataset_path = "/usr/users/ims/fix_jer/Datasets"
 
 classnames = ['apple', 'aquarium_fish', 'baby', 'bear', 'beaver', 'bed', 'bee', 'beetle', 'bicycle', 'bottle', 'bowl', 'boy', 'bridge', 'bus', 'butterfly', 'camel', 'can', 'castle', 'caterpillar', 'cattle', 'chair', 'chimpanzee', 'clock', 'cloud', 'cockroach', 'couch', 'crab', 'crocodile', 'cup', 'dinosaur', 'dolphin', 'elephant', 'flatfish', 'forest', 'fox', 'girl', 'hamster', 'house', 'kangaroo', 'keyboard', 'lamp', 'lawn_mower', 'leopard', 'lion', 'lizard', 'lobster', 'man', 'maple_tree', 'motorcycle', 'mountain', 'mouse', 'mushroom', 'oak_tree', 'orange', 'orchid', 'otter', 'palm_tree', 'pear', 'pickup_truck', 'pine_tree', 'plain', 'plate', 'poppy', 'porcupine', 'possum', 'rabbit', 'raccoon', 'ray', 'road', 'rocket', 'rose', 'sea', 'seal', 'shark', 'shrew', 'skunk', 'skyscraper', 'snail', 'snake', 'spider', 'squirrel', 'streetcar', 'sunflower', 'sweet_pepper', 'table', 'tank', 'telephone', 'television', 'tiger', 'tractor', 'train', 'trout', 'tulip', 'turtle', 'wardrobe', 'whale', 'willow_tree', 'wolf', 'woman', 'worm']
 
@@ -135,7 +137,7 @@ class Net(nn.Module):
         x = F.elu(self.fc1(x))
         x = self.drop(x)
         x = self.fc2(x)
-		# x = F.softmax(x) <-- useless if CrossEntropyLoss is used
+        x = F.log_softmax(x) # <-- useless if CrossEntropyLoss is used
         return x
 
     def num_flat_features(self, x):
@@ -158,7 +160,8 @@ net.apply(weights_init)
 #print("{} learnable parameters", len(net.parameters()))
 print(torch_summarize(net))
 
-criterion = nn.CrossEntropyLoss()
+#criterion = nn.CrossEntropyLoss()
+criterion = nn.NLLLoss()
 optimizer = optim.SGD(net.parameters(),
                       lr=base_lrate,
                       momentum=0.9,
@@ -171,7 +174,7 @@ scheduler = optim.lr_scheduler.StepLR(optimizer,
 train_metrics_history = {'times': [], 'loss':[], 'acc':[]}
 val_metrics_history = {'times': [], 'loss':[], 'acc':[]}
 
-for epoch in range(2):  # loop over the dataset multiple times
+for epoch in range(200):  # loop over the dataset multiple times
 
     train_loss = 0.0
     correct = 0
@@ -199,21 +202,21 @@ for epoch in range(2):  # loop over the dataset multiple times
         optimizer.step()
 
         # print statistics
-        train_loss += loss.data[0]
+        train_loss += loss.data[0]*targets.size(0)
         _, predicted = torch.max(outputs.data, 1)
         total += targets.size(0)
         correct += predicted.eq(targets.data).cpu().sum()
 
-        train_metrics_history['times'].append(epoch * len(trainloader) + total)
+        train_metrics_history['times'].append(epoch * len(trainloader) * batch_size + total)
         train_metrics_history['acc'].append(correct/float(total))
-        train_metrics_history['loss'].append(train_loss)
+        train_metrics_history['loss'].append(train_loss/total)
         
-        progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)' % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
+        progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)' % (train_loss/total, 100.*correct/total, correct, total))
     
     ##### At the end of an epoch, we compute the metrics on the validation set
 
     # Switch the network to the testing mode
-    net.test()
+    net.eval()
     val_loss = 0.0
     correct = 0
     total = 0
@@ -227,14 +230,16 @@ for epoch in range(2):  # loop over the dataset multiple times
         outputs = net(inputs)
         
         # print statistics
-        val_loss += loss.data[0]
+        val_loss += loss.data[0]*targets.size(0)
         _, predicted = torch.max(outputs.data, 1)
         total += targets.size(0)
         correct += predicted.eq(targets.data).cpu().sum()
-    print("Validation:   Loss : %.3f | Acc : %.3f%%"% (val_loss/len(valloader), 100.*correct/total))
+    val_loss = val_loss/total
+    val_acc = correct/float(total)
+    print("Validation:   Loss : %.3f | Acc : %.3f%%"% (val_loss, 100.*val_acc))
 
-    val_metrics_history['times'].append((epoch+1) * len(trainloader))
-    val_metrics_history['acc'].append(correct/float(total))
+    val_metrics_history['times'].append((epoch+1) * len(trainloader) * batch_size)
+    val_metrics_history['acc'].append(val_acc)
     val_metrics_history['loss'].append(val_loss)
 
         
@@ -242,7 +247,7 @@ print('Finished Training')
 
 
 # Switch the network to the testing mode
-net.test()
+net.eval()
 test_loss = 0.0
 correct = 0
 total = 0
@@ -256,12 +261,12 @@ for batch_idx, (inputs, targets) in enumerate(testloader, 0):
     outputs = net(inputs)
     
     # print statistics
-    test_loss += loss.data[0]
+    test_loss += loss.data[0]*targets.size(0)
     _, predicted = torch.max(outputs.data, 1)
     total += targets.size(0)
     correct += predicted.eq(targets.data).cpu().sum()
-test_acc = 100.*correct/total
-test_loss = test_loss/len(testloader)
+test_acc = 100.*correct/float(total)
+test_loss = test_loss/float(total)
 print("Test:   Loss : %.3f | Acc : %.3f%%"% (test_loss, test_acc))
 
 
