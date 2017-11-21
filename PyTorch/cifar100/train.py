@@ -46,7 +46,7 @@ std = np.array([0.301,0.295,0.261])
 data_transforms = {
     'train': transforms.Compose([
         transforms.ToTensor(),
-        RandomTranslate((5./32., 5./32.), interp='nearest')
+        RandomTranslate((5./32., 5./32.), interp='nearest'),
         RandomAffine(zoom_range=(0.8, 1.2)),
         RandomFlip(h=True, v=False),
         transforms.Normalize(mean, std)
