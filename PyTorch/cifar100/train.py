@@ -142,7 +142,7 @@ class Net(nn.Module):
         x = F.elu(self.bn10(self.conv10(x)))
         x = F.elu(self.bn11(self.conv11(x)))
         
-        x = F.max_pool2d(x, 2)
+        #x = F.max_pool2d(x, 2)
         
         x = F.elu(self.bn20(self.conv20(x)))
         x = F.elu(self.bn21(self.conv21(x)))
@@ -152,12 +152,12 @@ class Net(nn.Module):
         x = F.elu(self.bn30(self.conv30(x)))
         x = F.elu(self.bn31(self.conv31(x)))
         
-        x = F.max_pool2d(x, 2)
+        #x = F.max_pool2d(x, 2)
         
         x = F.elu(self.bn40(self.conv40(x)))
         x = F.elu(self.bn41(self.conv41(x)))
         
-        x = F.avg_pool2d(x, 4)
+        x = F.avg_pool2d(x, 16)
         
         x = x.view(-1, self.num_flat_features(x))
         x = F.elu(self.fc1(x))
