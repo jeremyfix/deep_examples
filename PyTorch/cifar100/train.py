@@ -120,25 +120,27 @@ class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
 
+        batchnorm_momentum = 0.01
+        
         self.conv10 = nn.Conv2d(  3, 32, 3, padding=1)
-        self.bn10   = nn.BatchNorm2d(32)
+        self.bn10   = nn.BatchNorm2d(32, momentum=batchnorm_momentum)
         self.conv11 = nn.Conv2d( 32, 32, 3, padding=1)
-        self.bn11   = nn.BatchNorm2d(32)
+        self.bn11   = nn.BatchNorm2d(32, momentum=batchnorm_momentum)
         
         self.conv20 = nn.Conv2d( 32, 64, 3, padding=1)
-        self.bn20   = nn.BatchNorm2d(64)
+        self.bn20   = nn.BatchNorm2d(64, momentum=batchnorm_momentum)
         self.conv21 = nn.Conv2d( 64, 64, 3, padding=1)
-        self.bn21   = nn.BatchNorm2d(64)
+        self.bn21   = nn.BatchNorm2d(64, momentum=batchnorm_momentum)
         
         self.conv30 = nn.Conv2d( 64,128, 3, padding=1)
-        self.bn30   = nn.BatchNorm2d(128)
+        self.bn30   = nn.BatchNorm2d(128, momentum=batchnorm_momentum)
         self.conv31 = nn.Conv2d(128,128, 3, padding=1)
-        self.bn31   = nn.BatchNorm2d(128)
+        self.bn31   = nn.BatchNorm2d(128, momentum=batchnorm_momentum)
         
         self.conv40 = nn.Conv2d(128,256, 3, padding=1)
-        self.bn40   = nn.BatchNorm2d(256)
+        self.bn40   = nn.BatchNorm2d(256, momentum=batchnorm_momentum)
         self.conv41 = nn.Conv2d(256,256, 3, padding=1)
-        self.bn41   = nn.BatchNorm2d(256)
+        self.bn41   = nn.BatchNorm2d(256, momentum=batchnorm_momentum)
         
         self.fc1   = nn.Linear(256, 500)
         self.drop  = nn.Dropout2d(0.5)
