@@ -191,9 +191,9 @@ print(torch_summarize(net))
 criterion = nn.NLLLoss()
 optimizer = optim.SGD(net.parameters(),
                       lr=base_lrate,
-                      momentum=0.9,
+                      momentum=0.9)
                       #nesterov=True,
-                      weight_decay=5e-4)
+                      #weight_decay=5e-4)
 scheduler = optim.lr_scheduler.StepLR(optimizer,
                                       step_size=50,
                                       gamma=0.1)
