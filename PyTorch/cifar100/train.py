@@ -12,7 +12,7 @@ from torchvision import datasets, transforms
 # pip3 install nibabel tqdm
 # pip3 install git+https://github.com/ncullen93/torchsample
 import torchsample
-from torchsample.transforms import RandomAffine
+from torchsample.transforms import RandomAffine, RandomFlip, RandomShift
 
 from utils import progress_bar, torch_summarize, split
 
@@ -45,10 +45,10 @@ std = np.array([0.301,0.295,0.261])
 
 data_transforms = {
     'train': transforms.Compose([
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomCrop(32, padding=5),
         transforms.ToTensor(),
+        RandomTranslate((5./32., 5./32.), interp='nearest')
         RandomAffine(zoom_range=(0.8, 1.2)),
+        RandomFlip(h=True, v=False),
         transforms.Normalize(mean, std)
     ]),
     'val': transforms.Compose([
