@@ -12,7 +12,7 @@ from torchvision import datasets, transforms
 # pip3 install nibabel tqdm
 # pip3 install git+https://github.com/ncullen93/torchsample
 import torchsample
-from torchsample.transforms import RandomAffine, RandomFlip, RandomShift
+from torchsample.transforms import RandomAffine, RandomFlip, RandomTranslate
 
 from utils import progress_bar, torch_summarize, split
 
