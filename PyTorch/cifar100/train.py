@@ -107,10 +107,12 @@ else:
 def weights_init(m):
     classname = m.__class__.__name__
     if 'Conv' in classname:
-        nn.init.xavier_uniform(m.weight.data, gain=1.)
+        #nn.init.xavier_uniform(m.weight.data, gain=1.)
+        nn.init.kaiming_normal(m.weight.data)
         m.bias.data.fill_(0)
     elif 'Linear' in classname:
-        nn.init.xavier_uniform(m.weight.data, gain=1.)
+        #nn.init.xavier_uniform(m.weight.data, gain=1.)
+        nn.init.kaiming_normal(m.weight.data)
         m.bias.data.fill_(0)
         
     
