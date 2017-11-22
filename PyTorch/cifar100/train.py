@@ -243,7 +243,7 @@ for epoch in range(max_epochs):  # loop over the dataset multiple times
         train_loss += loss.data[0]*targets.size(0)
         _, predicted = torch.max(outputs.data, 1)
         total += targets.size(0)
-        correct += predicted.eq(targets.data).cpu().sum()
+        correct += torch.sum(predicted == targets.data)
 
         train_metrics_history['times'].append(epoch + float(total)/(len(trainloader) * batch_size))
         train_metrics_history['acc'].append(correct/float(total))
@@ -271,7 +271,7 @@ for epoch in range(max_epochs):  # loop over the dataset multiple times
         val_loss += loss.data[0]*targets.size(0)
         _, predicted = torch.max(outputs.data, 1)
         total += targets.size(0)
-        correct += predicted.eq(targets.data).cpu().sum()
+        correct += torch.sum(predicted == targets.data)
     val_loss = val_loss/total
     val_acc = correct/float(total)
     print("[%d/%d] Validation:   Loss : %.3f | Acc : %.3f%%"% (epoch, max_epochs, val_loss, 100.*val_acc))
