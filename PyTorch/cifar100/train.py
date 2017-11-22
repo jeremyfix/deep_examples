@@ -104,19 +104,6 @@ else:
 # Convolution blocks : Conv - BN - ELU
 # C3s1 x 32, C3s1 x 64, Max2s2, C3s1x128, C3s1x256, GlobalAvg, Dense(500), Dropout(0.5), Dense(100), Softmax
 
-def weights_init(m):
-    classname = m.__class__.__name__
-    if 'Conv' in classname:
-        #nn.init.xavier_uniform(m.weight.data, gain=1.)
-        nn.init.kaiming_normal(m.weight.data)
-        m.bias.data.fill_(0)
-    elif 'Linear' in classname:
-        #nn.init.xavier_uniform(m.weight.data, gain=1.)
-        nn.init.kaiming_normal(m.weight.data)
-        m.bias.data.fill_(0)
-        
-    
-
 class Net(nn.Module):
 
     def __init__(self):
@@ -148,7 +135,20 @@ class Net(nn.Module):
         self.drop  = nn.Dropout2d(0.5)
         self.fc2   = nn.Linear(500, 100)
 
+        self.init()
         
+    def init(self):
+        for m in self.modules():
+            if   isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal(m.weight.data)
+                m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+            elif isinstance(m, nn.Linear):
+                nn.init.kaiming_normal(m.weight.data)
+                m.bias.data.zero_()
+
     def forward(self, x):
         x = F.elu(self.bn10(self.conv10(x)))
         x = F.elu(self.bn11(self.conv11(x)))
@@ -185,6 +185,8 @@ class Net(nn.Module):
         return num_features
 
 
+    
+
 # Base lrate : 0.01
 
 base_lrate = 0.01
@@ -192,7 +194,6 @@ base_lrate = 0.01
 net = Net()
 if(use_gpu):
     net.cuda()
-net.apply(weights_init)
 
 #print("{} learnable parameters", len(net.parameters()))
 print(torch_summarize(net))
@@ -211,7 +212,7 @@ scheduler = optim.lr_scheduler.StepLR(optimizer,
 train_metrics_history = {'times': [], 'loss':[], 'acc':[]}
 val_metrics_history = {'times': [], 'loss':[], 'acc':[]}
 
-max_epochs = 200
+max_epochs = 150
 for epoch in range(max_epochs):  # loop over the dataset multiple times
 
     train_loss = 0.0
@@ -302,7 +303,7 @@ for batch_idx, (inputs, targets) in enumerate(testloader, 0):
     test_loss += loss.data[0]*targets.size(0)
     _, predicted = torch.max(outputs.data, 1)
     total += targets.size(0)
-    correct += predicted.eq(targets.data).cpu().sum()
+    correct += torch.sum(predicted == targets.data)
 test_acc = 100.*correct/float(total)
 test_loss = test_loss/float(total)
 print("Test:   Loss : %.3f | Acc : %.3f%%"% (test_loss, test_acc))
