@@ -352,7 +352,6 @@ for epoch in range(max_epochs):  # loop over the dataset multiple times
         optimizer.step()
 
         # print statistics
-        print(loss.data[0])
         train_loss += loss.data[0]*targets.size(0)
         _, predicted = torch.max(outputs.data, 1)
         total += targets.size(0)
