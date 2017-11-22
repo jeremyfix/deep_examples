@@ -23,8 +23,57 @@ import matplotlib.pyplot as plt
 plt.style.use('ggplot')
 
 import numpy as np
+import argparse
 
-batch_size = 32
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument(
+    '--data_augment',
+    help='Specify if you want to use data augmentation',
+    action='store_true'
+)
+
+parser.add_argument(
+    '--dropout',
+    help='Specify to use dropout',
+    action='store_true'
+)
+
+parser.add_argument(
+    '--l2_reg',
+    help='Specify to use l2_reg',
+    action='store_true'
+)
+
+parser.add_argument(
+    '--bn',
+    help='Specify to use batch normalization',
+    action='store_true'
+)
+
+parser.add_argument(
+    '--base_lrate',
+    help='Which base learning rate to use',
+    type=float,
+    default=0.001
+)
+
+parser.add_argument(
+    '--batch_size',
+    required=True,
+    type=int
+)
+
+args = parser.parse_args()
+
+use_dataset_augmentation = args.data_augment
+use_dropout = args.dropout
+use_bn = args.bn
+base_lrate = args.base_lrate
+batch_size = args.batch_size
+use_l2_reg = args.l2_reg
+
 
 #dataset_path = "/home/fix_jer/Datasets"
 #dataset_path = "/usr/users/ims/fix_jer/Datasets"
@@ -44,13 +93,7 @@ mean = np.array([0.542,0.534,0.474])
 std = np.array([0.301,0.295,0.261])
 
 data_transforms = {
-    'train': transforms.Compose([
-        transforms.ToTensor(),
-        RandomTranslate((5./32., 5./32.), interp='nearest'),
-        RandomAffine(zoom_range=(0.8, 1.2)),
-        RandomFlip(h=True, v=False),
-        transforms.Normalize(mean, std)
-    ]),
+    'train': None,
     'val': transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(mean, std)
@@ -61,7 +104,20 @@ data_transforms = {
     ])
 }
 
-
+if use_dataset_augmentation:
+    data_transforms['train'] = transforms.Compose([
+        transforms.ToTensor(),
+        RandomTranslate((5./32., 5./32.), interp='nearest'),
+        RandomAffine(zoom_range=(0.8, 1.2)),
+        RandomFlip(h=True, v=False),
+        transforms.Normalize(mean, std)
+    ])
+else:
+    data_transforms['train'] = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std)
+    ])
+        
     
 base_trainset = lambda trans: datasets.CIFAR100(train=True, root=dataset_path, download=True, transform=trans)
 
@@ -106,35 +162,61 @@ else:
 
 class Net(nn.Module):
 
-    def __init__(self):
+    def __init__(self, use_dropout, use_batchnorm, use_l2reg):
         super(Net, self).__init__()
 
+        self.use_dropout = use_dropout
+        self.use_batchnorm = use_batchnorm
+        self.use_l2reg = use_l2reg
+        
         batchnorm_momentum = 0.99
         
         self.conv10 = nn.Conv2d(  3, 32, 3, padding=1)
-        self.bn10   = nn.BatchNorm2d(32, momentum=batchnorm_momentum)
+        if self.use_batchnorm:
+            self.bn10   = nn.BatchNorm2d(32, momentum=batchnorm_momentum)
+        self.elu10  = nn.ELU(inplace=True)
         self.conv11 = nn.Conv2d( 32, 32, 3, padding=1)
-        self.bn11   = nn.BatchNorm2d(32, momentum=batchnorm_momentum)
+        if self.use_batchnorm:
+            self.bn11   = nn.BatchNorm2d(32, momentum=batchnorm_momentum)
+        self.elu11  = nn.ELU(inplace=True)
         
         self.conv20 = nn.Conv2d( 32, 64, 3, padding=1)
-        self.bn20   = nn.BatchNorm2d(64, momentum=batchnorm_momentum)
+        if self.use_batchnorm:
+            self.bn20   = nn.BatchNorm2d(64, momentum=batchnorm_momentum)
+        self.elu20  = nn.ELU(inplace=True)
         self.conv21 = nn.Conv2d( 64, 64, 3, padding=1)
-        self.bn21   = nn.BatchNorm2d(64, momentum=batchnorm_momentum)
+        if self.use_batchnorm:
+            self.bn21   = nn.BatchNorm2d(64, momentum=batchnorm_momentum)
+        self.elu21  = nn.ELU(inplace=True)
         
         self.conv30 = nn.Conv2d( 64,128, 3, padding=1)
-        self.bn30   = nn.BatchNorm2d(128, momentum=batchnorm_momentum)
+        if self.use_batchnorm:
+            self.bn30   = nn.BatchNorm2d(128, momentum=batchnorm_momentum)
+        self.elu30  = nn.ELU(inplace=True)
         self.conv31 = nn.Conv2d(128,128, 3, padding=1)
-        self.bn31   = nn.BatchNorm2d(128, momentum=batchnorm_momentum)
+        if self.use_batchnorm:
+            self.bn31   = nn.BatchNorm2d(128, momentum=batchnorm_momentum)
+        self.elu31  = nn.ELU(inplace=True)
         
         self.conv40 = nn.Conv2d(128,256, 3, padding=1)
-        self.bn40   = nn.BatchNorm2d(256, momentum=batchnorm_momentum)
+        if self.use_batchnorm:
+            self.bn40   = nn.BatchNorm2d(256, momentum=batchnorm_momentum)
+        self.elu40  = nn.ELU(inplace=True)
         self.conv41 = nn.Conv2d(256,256, 3, padding=1)
-        self.bn41   = nn.BatchNorm2d(256, momentum=batchnorm_momentum)
+        if self.use_batchnorm:
+            self.bn41   = nn.BatchNorm2d(256, momentum=batchnorm_momentum)
+        self.elu41  = nn.ELU(inplace=True)
         
         self.fc1   = nn.Linear(256, 500)
-        self.drop  = nn.Dropout2d(0.5)
+        self.elu1  = nn.ELU(inplace=True)
+        if self.use_dropout:
+            self.drop  = nn.Dropout2d(0.5)
         self.fc2   = nn.Linear(500, 100)
 
+        self.loss = nn.NLLLoss()
+        if use_l2reg:
+            pass
+        
         self.init()
         
     def init(self):
@@ -150,31 +232,66 @@ class Net(nn.Module):
                 m.bias.data.zero_()
 
     def forward(self, x):
-        x = F.elu(self.bn10(self.conv10(x)))
-        x = F.elu(self.bn11(self.conv11(x)))
+        x = self.conv10(x)
+        if self.use_batchnorm:
+            x = self.bn10(x)
+        x = self.elu10(x)
+
+        x = self.conv11(x)
+        if self.use_batchnorm:
+            x = self.bn11(x)
+        x = self.elu11(x)
         
         #x = F.max_pool2d(x, 2)
-        
-        x = F.elu(self.bn20(self.conv20(x)))
-        x = F.elu(self.bn21(self.conv21(x)))
+
+        x = self.conv20(x)
+        if self.use_batchnorm:
+            x = self.bn20(x)
+        x = self.elu20(x)
+
+        x = self.conv21(x)
+        if self.use_batchnorm:
+            x = self.bn21(x)
+        x = self.elu21(x)
         
         x = F.max_pool2d(x, 2)
-        
-        x = F.elu(self.bn30(self.conv30(x)))
-        x = F.elu(self.bn31(self.conv31(x)))
+
+        x = self.conv30(x)
+        if self.use_batchnorm:
+            x = self.bn30(x)
+        x = self.elu30(x)
+
+        x = self.conv31(x)
+        if self.use_batchnorm:
+            x = self.bn31(x)
+        x = self.elu31(x)
         
         #x = F.max_pool2d(x, 2)
-        
-        x = F.elu(self.bn40(self.conv40(x)))
-        x = F.elu(self.bn41(self.conv41(x)))
-        
-        x = F.avg_pool2d(x, 16)
+
+        x = self.conv40(x)
+        if self.use_batchnorm:
+            x = self.bn40(x)
+        x = self.elu40(x)
+
+        x = self.conv41(x)
+        if self.use_batchnorm:
+            x = self.bn41(x)
+        x = self.elu41(x)
+
+        x = F.avg_pool2d(x, x.size()[-1])
         
         x = x.view(-1, self.num_flat_features(x))
-        x = F.elu(self.fc1(x))
-        x = self.drop(x)
+
+        x = self.fc1(x)
+        x = self.elu1(x)
+
+        if self.use_dropout:
+            x = self.drop(x)
+        
         x = self.fc2(x)
+        
         x = F.log_softmax(x) # <-- useless if CrossEntropyLoss is used
+        
         return x
 
     def num_flat_features(self, x):
@@ -186,12 +303,7 @@ class Net(nn.Module):
 
 
     
-
-# Base lrate : 0.01
-
-base_lrate = 0.01
-
-net = Net()
+net = Net(use_dropout, use_bn, use_l2_reg)
 if(use_gpu):
     net.cuda()
 
@@ -199,12 +311,11 @@ if(use_gpu):
 print(torch_summarize(net))
 
 #criterion = nn.CrossEntropyLoss()
-criterion = nn.NLLLoss()
+criterion = net.loss
 optimizer = optim.SGD(net.parameters(),
                       lr=base_lrate,
                       momentum=0.9)
-                      #nesterov=True,
-                      #weight_decay=5e-4)
+
 scheduler = optim.lr_scheduler.StepLR(optimizer,
                                       step_size=50,
                                       gamma=0.1)
@@ -241,6 +352,7 @@ for epoch in range(max_epochs):  # loop over the dataset multiple times
         optimizer.step()
 
         # print statistics
+        print(loss.data[0])
         train_loss += loss.data[0]*targets.size(0)
         _, predicted = torch.max(outputs.data, 1)
         total += targets.size(0)
@@ -267,6 +379,7 @@ for epoch in range(max_epochs):  # loop over the dataset multiple times
         inputs, targets = Variable(inputs), Variable(targets)
         # forward + backward + optimize
         outputs = net(inputs)
+        loss = criterion(outputs, targets)
         
         # print statistics
         val_loss += loss.data[0]*targets.size(0)
@@ -298,6 +411,7 @@ for batch_idx, (inputs, targets) in enumerate(testloader, 0):
     inputs, targets = Variable(inputs), Variable(targets)
     # forward + backward + optimize
     outputs = net(inputs)
+    loss = criterion(outputs, targets)
     
     # print statistics
     test_loss += loss.data[0]*targets.size(0)
@@ -328,6 +442,28 @@ plt.title('Model loss')
 plt.ylabel('loss')
 plt.xlabel('Num samples')
 plt.legend(['train', 'val'], loc='center right')
-plt.suptitle("Test : Loss:%.3f | Acc : %.3f%%" % (test_loss, test_acc))
+
+
+suptitle = "Test : Loss:%.3f | Acc : %.3f%%;" % (test_loss, test_acc)
+if use_dataset_augmentation:
+    suptitle += " dataAugment "
+else:
+    suptilte += " - "
+if use_dropout:
+    suptitle += " dropout "
+else:
+    suptilte += " - "
+if use_l2_reg:
+    suptitle += " l2 "
+else:
+    suptilte += " - "
+if use_bn:
+    suptitle += " BN "
+else:
+    suptilte += " - "
+suptitle += " lr{} ".format(base_lrate)
+suptitle += " bs{} ".format(batch_size)
+
+plt.suptitle(suptitle)
 
 plt.savefig("expe.pdf", bbox_inches='tight')
