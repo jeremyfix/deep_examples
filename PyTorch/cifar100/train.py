@@ -186,42 +186,43 @@ class Net(nn.Module):
         self.use_batchnorm = use_batchnorm
         self.use_l2reg = use_l2reg
         
-        batchnorm_momentum = 0.99
+        batchnorm_momentum = 0.1
+        batchnorm_epsilon = 1e-3
         
         self.conv10 = nn.Conv2d(  3, 32, 3, padding=1)
         if self.use_batchnorm:
-            self.bn10   = nn.BatchNorm2d(32, momentum=batchnorm_momentum)
+            self.bn10   = nn.BatchNorm2d(32, eps=batchnorm_epsilon, momentum=batchnorm_momentum)
         self.elu10  = nn.ELU(inplace=True)
         self.conv11 = nn.Conv2d( 32, 32, 3, padding=1)
         if self.use_batchnorm:
-            self.bn11   = nn.BatchNorm2d(32, momentum=batchnorm_momentum)
+            self.bn11   = nn.BatchNorm2d(32, eps=batchnorm_epsilon, momentum=batchnorm_momentum)
         self.elu11  = nn.ELU(inplace=True)
         
         self.conv20 = nn.Conv2d( 32, 64, 3, padding=1)
         if self.use_batchnorm:
-            self.bn20   = nn.BatchNorm2d(64, momentum=batchnorm_momentum)
+            self.bn20   = nn.BatchNorm2d(64, eps=batchnorm_epsilon, momentum=batchnorm_momentum)
         self.elu20  = nn.ELU(inplace=True)
         self.conv21 = nn.Conv2d( 64, 64, 3, padding=1)
         if self.use_batchnorm:
-            self.bn21   = nn.BatchNorm2d(64, momentum=batchnorm_momentum)
+            self.bn21   = nn.BatchNorm2d(64, eps=batchnorm_epsilon, momentum=batchnorm_momentum)
         self.elu21  = nn.ELU(inplace=True)
         
         self.conv30 = nn.Conv2d( 64,128, 3, padding=1)
         if self.use_batchnorm:
-            self.bn30   = nn.BatchNorm2d(128, momentum=batchnorm_momentum)
+            self.bn30   = nn.BatchNorm2d(128, eps=batchnorm_epsilon, momentum=batchnorm_momentum)
         self.elu30  = nn.ELU(inplace=True)
         self.conv31 = nn.Conv2d(128,128, 3, padding=1)
         if self.use_batchnorm:
-            self.bn31   = nn.BatchNorm2d(128, momentum=batchnorm_momentum)
+            self.bn31   = nn.BatchNorm2d(128, eps=batchnorm_epsilon, momentum=batchnorm_momentum)
         self.elu31  = nn.ELU(inplace=True)
         
         self.conv40 = nn.Conv2d(128,256, 3, padding=1)
         if self.use_batchnorm:
-            self.bn40   = nn.BatchNorm2d(256, momentum=batchnorm_momentum)
+            self.bn40   = nn.BatchNorm2d(256, eps=batchnorm_epsilon, momentum=batchnorm_momentum)
         self.elu40  = nn.ELU(inplace=True)
         self.conv41 = nn.Conv2d(256,256, 3, padding=1)
         if self.use_batchnorm:
-            self.bn41   = nn.BatchNorm2d(256, momentum=batchnorm_momentum)
+            self.bn41   = nn.BatchNorm2d(256, eps=batchnorm_epsilon, momentum=batchnorm_momentum)
         self.elu41  = nn.ELU(inplace=True)
         
         self.fc1   = nn.Linear(256, 500)
