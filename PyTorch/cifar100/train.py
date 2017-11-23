@@ -1,8 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
 import torch.nn.init as init
+import torch.optim as optim
+from torch.utils.data.sampler import SubsetRandomSampler
 from torch.optim import lr_scheduler
 from torch.autograd import Variable
 
@@ -14,7 +15,7 @@ from torchvision import datasets, transforms
 import torchsample
 from torchsample.transforms import RandomAffine, RandomFlip, RandomTranslate
 
-from utils import progress_bar, torch_summarize, split
+from utils import progress_bar, torch_summarize, compute_mean_std
 
 import matplotlib
 # Force matplotlib to not use any Xwindows backend.
@@ -73,7 +74,16 @@ use_bn = args.bn
 base_lrate = args.base_lrate
 batch_size = args.batch_size
 use_l2_reg = args.l2_reg
+valid_size = 0.2
+num_workers = 2
 
+use_gpu = torch.cuda.is_available()
+if use_gpu:
+    print("Using GPU{}".format(torch.cuda.current_device()))
+else:
+    print("Using CPU")
+
+pin_memory = use_gpu
 
 #dataset_path = "/home/fix_jer/Datasets"
 #dataset_path = "/usr/users/ims/fix_jer/Datasets"
@@ -81,26 +91,37 @@ dataset_path = "/opt/Datasets/"
 
 classnames = ['apple', 'aquarium_fish', 'baby', 'bear', 'beaver', 'bed', 'bee', 'beetle', 'bicycle', 'bottle', 'bowl', 'boy', 'bridge', 'bus', 'butterfly', 'camel', 'can', 'castle', 'caterpillar', 'cattle', 'chair', 'chimpanzee', 'clock', 'cloud', 'cockroach', 'couch', 'crab', 'crocodile', 'cup', 'dinosaur', 'dolphin', 'elephant', 'flatfish', 'forest', 'fox', 'girl', 'hamster', 'house', 'kangaroo', 'keyboard', 'lamp', 'lawn_mower', 'leopard', 'lion', 'lizard', 'lobster', 'man', 'maple_tree', 'motorcycle', 'mountain', 'mouse', 'mushroom', 'oak_tree', 'orange', 'orchid', 'otter', 'palm_tree', 'pear', 'pickup_truck', 'pine_tree', 'plain', 'plate', 'poppy', 'porcupine', 'possum', 'rabbit', 'raccoon', 'ray', 'road', 'rocket', 'rose', 'sea', 'seal', 'shark', 'shrew', 'skunk', 'skyscraper', 'snail', 'snake', 'spider', 'squirrel', 'streetcar', 'sunflower', 'sweet_pepper', 'table', 'tank', 'telephone', 'television', 'tiger', 'tractor', 'train', 'trout', 'tulip', 'turtle', 'wardrobe', 'whale', 'willow_tree', 'wolf', 'woman', 'worm']
 
+####### Computing mean/std images from the training set
+####### and splitting into train/val
+train_dataset = datasets.CIFAR100(train=True, root=dataset_path, download=True, transform=transforms.ToTensor())
 
-# trainset = datasets.CIFAR100(train=True, root=dataset_path, download=True)
+num_train = len(train_dataset)
+indices = list(range(num_train))
+split = int(np.floor(valid_size * num_train))
+np.random.shuffle(indices)
+train_idx, valid_idx = indices[split:], indices[:split]
+train_sampler = SubsetRandomSampler(train_idx)
+valid_sampler = SubsetRandomSampler(valid_idx)
 
-# mean = trainset.train_data.mean(axis=0)/255
-# std = trainset.train_data.std(axis=0)/255
-# print(mean[0,:,:].mean(), mean[1,:,:].mean(), mean[2:,:,:].mean())
-# print(std[0,:,:].mean(), std[1,:,:].mean(), std[2:,:,:].mean())
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, sampler=train_sampler, num_workers=2, pin_memory=pin_memory)
 
-mean = np.array([0.542,0.534,0.474])
-std = np.array([0.301,0.295,0.261])
+
+#mean_tensor = torch.Tensor(np.array([0.5,0.5,0.5], dtype=np.float32))
+#std_tensor = torch.Tensor(np.array([0.3,0.3,0.3], dtype=np.float32))
+
+mean_tensor, std_tensor = compute_mean_std(train_loader)
+
+
 
 data_transforms = {
     'train': None,
-    'val': transforms.Compose([
+    'valid': transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize(mean, std)
+        transforms.Lambda(lambda x: (x.sub(mean_tensor)).div(std_tensor))
     ]),   
     'test': transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize(mean, std)
+        transforms.Lambda(lambda x: (x.sub(mean_tensor)).div(std_tensor))
     ])
 }
 
@@ -110,34 +131,30 @@ if use_dataset_augmentation:
         RandomTranslate((5./32., 5./32.), interp='nearest'),
         RandomAffine(zoom_range=(0.8, 1.2)),
         RandomFlip(h=True, v=False),
-        transforms.Normalize(mean, std)
+        transforms.Lambda(lambda x: (x.sub(mean_tensor)).div(std_tensor))
     ])
 else:
     data_transforms['train'] = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize(mean, std)
+        transforms.Lambda(lambda x: (x.sub(mean_tensor)).div(std_tensor))
     ])
-        
-    
-base_trainset = lambda trans: datasets.CIFAR100(train=True, root=dataset_path, download=True, transform=trans)
 
-trainset, valset = split(base_trainset, 40000, data_transforms['train'], data_transforms['val'])
+train_dataset = datasets.CIFAR100(train=True, root=dataset_path, download=True, transform=data_transforms['train'])
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, sampler=train_sampler, num_workers=num_workers, pin_memory=pin_memory)
 
-print("{} samples in the training set".format(len(trainset)))
-print("{} samples in the validation set".format(len(valset)))
-
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=2)
-valloader = torch.utils.data.DataLoader(valset, batch_size=batch_size, shuffle=False, num_workers=2)
-
-testset = datasets.CIFAR100(train=False, root=dataset_path, download=True, transform=data_transforms['test'])
-testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=2)
+valid_dataset = datasets.CIFAR100(train=True, root=dataset_path, download=True, transform=data_transforms['valid'])
+valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch_size, sampler=valid_sampler, num_workers=num_workers, pin_memory=pin_memory)
 
 
-use_gpu = torch.cuda.is_available()
-if use_gpu:
-    print("Using GPU{}".format(torch.cuda.current_device()))
-else:
-    print("Using CPU")
+print("{} samples in the training set".format(len(train_idx)))
+print("{} samples in the validation set".format(len(valid_idx)))
+
+
+test_dataset = datasets.CIFAR100(train=False, root=dataset_path, download=True, transform=data_transforms['test'])
+test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
+
+
+
     
 # # Get a batch of training data
 # inputs, classes = next(iter(trainloader))
@@ -334,7 +351,7 @@ for epoch in range(max_epochs):  # loop over the dataset multiple times
     net.train()
     
     scheduler.step()
-    for batch_idx, (inputs, targets) in enumerate(trainloader, 0):
+    for batch_idx, (inputs, targets) in enumerate(train_loader, 0):
 		
         # wrap them in Variable
         if use_gpu:
@@ -357,11 +374,11 @@ for epoch in range(max_epochs):  # loop over the dataset multiple times
         total += targets.size(0)
         correct += torch.sum(predicted == targets.data)
 
-        train_metrics_history['times'].append(epoch + float(total)/(len(trainloader) * batch_size))
+        train_metrics_history['times'].append(epoch + float(total)/(len(train_loader) * batch_size))
         train_metrics_history['acc'].append(correct/float(total))
         train_metrics_history['loss'].append(train_loss/total)
         
-        progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)' % (train_loss/total, 100.*correct/total, correct, total))
+        progress_bar(batch_idx, len(train_loader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)' % (train_loss/total, 100.*correct/total, correct, total))
     
     ##### At the end of an epoch, we compute the metrics on the validation set
 
@@ -370,7 +387,7 @@ for epoch in range(max_epochs):  # loop over the dataset multiple times
     val_loss = 0.0
     correct = 0
     total = 0
-    for batch_idx, (inputs, targets) in enumerate(valloader, 0):
+    for batch_idx, (inputs, targets) in enumerate(valid_loader, 0):
         # wrap them in Variable
         if use_gpu:
             inputs, targets = inputs.cuda(), targets.cuda()
@@ -402,7 +419,7 @@ net.eval()
 test_loss = 0.0
 correct = 0
 total = 0
-for batch_idx, (inputs, targets) in enumerate(testloader, 0):
+for batch_idx, (inputs, targets) in enumerate(test_loader, 0):
     # wrap them in Variable
     if use_gpu:
         inputs, targets = inputs.cuda(), targets.cuda()
@@ -444,25 +461,33 @@ plt.legend(['train', 'val'], loc='center right')
 
 
 suptitle = "Test : Loss:%.3f | Acc : %.3f%%;" % (test_loss, test_acc)
+pdf_filename = ""
 if use_dataset_augmentation:
     suptitle += " dataAugment "
+    pdf_filename += "dataAugment"
 else:
-    suptilte += " - "
+    suptitle += " - "
 if use_dropout:
     suptitle += " dropout "
+    pdf_filename += "_dropout_"
 else:
-    suptilte += " - "
+    suptitle += " - "
 if use_l2_reg:
     suptitle += " l2 "
+    pdf_filename += "_l2_"
 else:
-    suptilte += " - "
+    suptitle += " - "
 if use_bn:
     suptitle += " BN "
+    pdf_filename += "_BN_"
 else:
-    suptilte += " - "
+    suptitle += " - "
 suptitle += " lr{} ".format(base_lrate)
 suptitle += " bs{} ".format(batch_size)
+pdf_filename += "_lr{}_".format(base_lrate)
+pdf_filename += "_bs{}_".format(batch_size)
+
 
 plt.suptitle(suptitle)
 
-plt.savefig("expe.pdf", bbox_inches='tight')
+plt.savefig(pdf_filename+".pdf", bbox_inches='tight')

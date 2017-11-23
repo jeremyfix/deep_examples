@@ -163,3 +163,23 @@ def split(base_dataset, num_first_set, transform1, transform2):
     first_indexes = list(p[:num_first_set])
     second_indexes = list(p[num_first_set:])
     return SplitDataset(set1, first_indexes), SplitDataset(set2, second_indexes)
+
+
+def compute_mean_std(loader):
+    mean = np.zeros((3,32,32), dtype=np.float32)
+
+    total = 0
+    # Computing the mean
+    for _, (inputs, _) in enumerate(loader, 0):
+        npinputs = inputs.numpy()
+        mean += inputs.size(0) * np.mean(npinputs, axis=0)
+        total += inputs.size(0)
+    mean = mean / total
+
+    std = np.zeros((3, 32, 32), dtype=np.float32)
+    for _, (inputs, _) in enumerate(loader, 0):
+        npinputs = inputs.numpy()
+        std += ((npinputs - mean)**2).sum(axis=0)
+
+    std = np.sqrt(std / total)
+    return torch.from_numpy(mean), torch.from_numpy(std)
