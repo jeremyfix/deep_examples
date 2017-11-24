@@ -374,15 +374,18 @@ for epoch in range(max_epochs):  # loop over the dataset multiple times
         _, predicted = torch.max(outputs.data, 1)
         total += targets.size(0)
         correct += torch.sum(predicted == targets.data)
-
-        train_metrics_history['times'].append(epoch + float(total)/(len(train_loader) * batch_size))
-        train_metrics_history['acc'].append(correct/float(total))
-        train_metrics_history['loss'].append(train_loss/total)
         
         progress_bar(batch_idx, len(train_loader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)' % (train_loss/total, 100.*correct/total, correct, total))
-    
+
+    train_loss = train_loss / total
+    train_acc = correct / total
+    train_metrics_history['times'].append(epoch + 1)
+    train_metrics_history['acc'].append(train_acc)
+    train_metrics_history['loss'].append(train_loss)
+        
     ##### At the end of an epoch, we compute the metrics on the validation set
 
+    
     # Switch the network to the testing mode
     net.eval()
     val_loss = 0.0
