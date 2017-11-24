@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
 import torch.optim as optim
+from momentum_sgd import TestSGD
 from torch.utils.data.sampler import SubsetRandomSampler
 from torch.optim import lr_scheduler
 from torch.autograd import Variable
@@ -186,7 +187,7 @@ class Net(nn.Module):
         self.use_batchnorm = use_batchnorm
         self.use_l2reg = use_l2reg
         
-        batchnorm_momentum = 0.1
+        batchnorm_momentum = 0.99
         batchnorm_epsilon = 1e-3
         
         self.conv10 = nn.Conv2d(  3, 32, 3, padding=1)
@@ -330,7 +331,10 @@ print(torch_summarize(net))
 
 #criterion = nn.CrossEntropyLoss()
 criterion = net.loss
-optimizer = optim.SGD(net.parameters(),
+#optimizer = optim.SGD(net.parameters(),
+#                      lr=base_lrate,
+#                      momentum=0.9)
+optimizer = TestSGD(net.parameters(),
                       lr=base_lrate,
                       momentum=0.9)
 
