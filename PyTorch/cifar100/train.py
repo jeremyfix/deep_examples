@@ -340,7 +340,7 @@ optimizer = TestSGD(net.parameters(),
 
 scheduler = optim.lr_scheduler.StepLR(optimizer,
                                       step_size=50,
-                                      gamma=0.1)
+                                      gamma=0.3)
 
 train_metrics_history = {'times': [], 'loss':[], 'acc':[]}
 val_metrics_history = {'times': [], 'loss':[], 'acc':[]}
@@ -498,4 +498,4 @@ pdf_filename += "_bs{}_".format(batch_size)
 
 plt.suptitle(suptitle)
 
-plt.savefig(pdf_filename+".pdf", bbox_inches='tight')
+plt.savefig(pdf_filename+"_sched.pdf", bbox_inches='tight')
