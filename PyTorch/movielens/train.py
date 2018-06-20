@@ -22,7 +22,7 @@ class Model(nn.Module):
 
     def __init__(self, nusers, nmovies, embed_size, rating_range):
         super(Model, self).__init__()
-
+        self.drop = nn.Dropout(0.2, inplace=True)
         self.rating_range = rating_range
         self.embed_user = nn.Embedding(nusers, embed_size)
         self.embed_user.weight.data.normal_(0, 0.01)
@@ -31,10 +31,21 @@ class Model(nn.Module):
         self.embed_movie.weight.data.normal_(0, 0.01)
         self.bias_movie = nn.Embedding(nmovies, 1)
 
-    def forward(self, inp):
+    def forward0(self, inp):
         u_emb = self.embed_user(inp[:,0])
         u_b = self.bias_user(inp[:,0])
         m_emb = self.embed_movie(inp[:,1])
+        m_b = self.bias_movie(inp[:,1])
+        y_pred = (u_emb * m_emb).sum(1) + u_b.squeeze() + m_b.squeeze()
+        y_pred = F.sigmoid(y_pred) * (self.rating_range[1] - self.rating_range[0]) + self.rating_range[0]
+        return y_pred.view(y_pred.size()[0])
+    
+    def forward(self, inp):
+        u_emb = self.embed_user(inp[:,0])
+        self.drop(u_emb)
+        u_b = self.bias_user(inp[:,0])
+        m_emb = self.embed_movie(inp[:,1])
+        self.drop(m_emb)
         m_b = self.bias_movie(inp[:,1])
         y_pred = (u_emb * m_emb).sum(1) + u_b.squeeze() + m_b.squeeze()
         y_pred = F.sigmoid(y_pred) * (self.rating_range[1] - self.rating_range[0]) + self.rating_range[0]
@@ -99,8 +110,8 @@ help='disables CUDA training')
 
     print("moving model")
     model = Model(nusers, nmovies, embed_size, rating_range).to(device)
-    #optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
-    optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-3)
+    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
+    #optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-3)
     print("training")
     for epoch in range(1, 100):
         train(model, device, train_loader, val_loader, optimizer, epoch)#, writer)
