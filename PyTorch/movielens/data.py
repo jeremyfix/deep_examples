@@ -1,3 +1,4 @@
+import torch
 import torch.utils.data
 import os
 import numpy as np
@@ -11,8 +12,11 @@ def train_val_dataset(dataset_root_path, which, prop):
     train_idx = idx[:int(np.ceil(prop*nratings))]
     val_idx = idx[int(np.ceil(prop*nratings)):]
     print(len(train_idx), len(val_idx), train_idx[-1], val_idx[0])
-    return MovieLensDataset(dataset_root_path, which, train_idx),\
-        MovieLensDataset(dataset_root_path, which, val_idx)
+
+    train_set = MovieLensDataset(dataset_root_path, which, train_idx)
+    val_set = MovieLensDataset(dataset_root_path, which, val_idx)
+    return train_set, val_set, train_set.nusers, train_set.nmovies
+        
 
 class MovieLensDataset(torch.utils.data.Dataset):
 
@@ -56,4 +60,8 @@ class MovieLensDataset(torch.utils.data.Dataset):
         return self.ratings.shape[0]
 
     def __getitem__(self, i):
-        return (self.ratings[i, 0], self.ratings[i, 1]), self.ratings[i, 2]
+        return torch.from_numpy(np.asarray([self.ratings[i,0],self.ratings[i,1]], dtype=int)), \
+                torch.from_numpy(np.asarray(self.ratings[i, 2], dtype=np.float32))
+    #return (torch.from_numpy(np.asarray([self.ratings[i,0],self.ratings[i,1], dtype=int)), \
+        #           torch.from_numpy(np.asarray(self.ratings[i,1], dtype=int))), \
+        #           torch.from_numpy(np.asarray(self.ratings[i, 2], dtype=np.float32))
