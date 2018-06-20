@@ -100,7 +100,7 @@ help='disables CUDA training')
     print("moving model")
     model = Model(nusers, nmovies, embed_size, rating_range).to(device)
     #optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
-    optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-4)
+    optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-3)
     print("training")
     for epoch in range(1, 100):
         train(model, device, train_loader, val_loader, optimizer, epoch)#, writer)
