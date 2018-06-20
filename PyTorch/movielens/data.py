@@ -11,11 +11,12 @@ def train_val_dataset(dataset_root_path, which, prop):
     np.random.shuffle(idx)
     train_idx = idx[:int(np.ceil(prop*nratings))]
     val_idx = idx[int(np.ceil(prop*nratings)):]
-    print(len(train_idx), len(val_idx), train_idx[-1], val_idx[0])
+
+    print("{} training samples, {} validation samples".format(len(train_idx), len(val_idx)))
 
     train_set = MovieLensDataset(dataset_root_path, which, train_idx)
     val_set = MovieLensDataset(dataset_root_path, which, val_idx)
-    return train_set, val_set, train_set.nusers, train_set.nmovies
+    return train_set, val_set, train_set.nusers, train_set.nmovies, (train_set.min_rating, train_set.max_rating)
         
 
 class MovieLensDataset(torch.utils.data.Dataset):
@@ -35,7 +36,8 @@ class MovieLensDataset(torch.utils.data.Dataset):
         self.ratings = np.loadtxt(dataset_filename, delimiter=',', skiprows=1)
         self.nusers = len(np.unique(self.ratings[:,0]))
         self.nmovies = len(np.unique(self.ratings[:,1]))
-        
+        self.min_rating = np.array(self.ratings[:,2]).min()
+        self.max_rating = np.array(self.ratings[:,2]).max()
         
         ############ Remap ids to continuous ids
         # The ids are not necessarily contiguous...

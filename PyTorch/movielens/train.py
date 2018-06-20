@@ -20,16 +20,24 @@ import argparse
 class Model(nn.Module):
     """Container module with 2 embeddings layers, one dense"""
 
-    def __init__(self, nusers, nmovies, embed_size):
+    def __init__(self, nusers, nmovies, embed_size, rating_range):
         super(Model, self).__init__()
 
+        self.rating_range = rating_range
         self.embed_user = nn.Embedding(nusers, embed_size)
+        self.embed_user.weight.data.normal_(0, 0.01)
+        self.bias_user = nn.Embedding(nusers, 1)
         self.embed_movie = nn.Embedding(nmovies, embed_size)
+        self.embed_movie.weight.data.normal_(0, 0.01)
+        self.bias_movie = nn.Embedding(nmovies, 1)
 
     def forward(self, inp):
         u_emb = self.embed_user(inp[:,0])
+        u_b = self.bias_user(inp[:,0])
         m_emb = self.embed_movie(inp[:,1])
-        y_pred = (u_emb * m_emb).sum(1)
+        m_b = self.bias_movie(inp[:,1])
+        y_pred = (u_emb * m_emb).sum(1) + u_b.squeeze() + m_b.squeeze()
+        y_pred = F.sigmoid(y_pred) * (self.rating_range[1] - self.rating_range[0]) + self.rating_range[0]
         return y_pred.view(y_pred.size()[0])
 
 
@@ -77,7 +85,7 @@ help='disables CUDA training')
     embed_size = args.embed_size
     
     print("dset")
-    train_dataset, val_dataset, nusers, nmovies = mldata.train_val_dataset(args.root_dir, 'latest-small', 0.8)
+    train_dataset, val_dataset, nusers, nmovies, rating_range = mldata.train_val_dataset(args.root_dir, 'latest-small', 0.8)
     print(use_cuda)
     device = torch.device("cuda" if use_cuda else "cpu")
     print("loading data")
@@ -90,7 +98,7 @@ help='disables CUDA training')
     
 
     print("moving model")
-    model = Model(nusers, nmovies, embed_size).to(device)
+    model = Model(nusers, nmovies, embed_size, rating_range).to(device)
     #optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     optimizer = optim.Adam(model.parameters(), lr=0.01)
     print("training")
