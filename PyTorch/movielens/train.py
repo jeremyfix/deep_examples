@@ -5,11 +5,11 @@ import data as mldata
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch.functional as F
+import torch.nn.functional as F
 import numpy as np
 import sys
 import argparse
-
+from tensorboardX import SummaryWriter
     
 ########## Build the network as :
 ### Embedding(user)    Embedding(movie)
@@ -25,19 +25,18 @@ class Model(nn.Module):
 
         self.embed_user = nn.Embedding(nusers, embed_size)
         self.embed_movie = nn.Embedding(nmovies, embed_size)
-        self.fc = nn.Linear(embed_size, 1)
 
     def forward(self, inp):
         u_emb = self.embed_user(inp[:,0])
         m_emb = self.embed_movie(inp[:,1])
-        #y_pred = self.fc(u_emb)
         y_pred = (u_emb * m_emb).sum(1)
         return y_pred.view(y_pred.size()[0])
 
 
-def train(model, device, train_loader, optimizer, epoch):
+def train(model, device, train_loader, val_loader, optimizer, epoch, writer):
     model.train()
     loss = nn.MSELoss()
+    num_train_samples = 0
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
@@ -46,12 +45,24 @@ def train(model, device, train_loader, optimizer, epoch):
         output = loss(predicted, target)
         output.backward()
         optimizer.step()
-        if batch_idx % 10 == 0:
+        num_train_samples += len(data)
+        if batch_idx % 100 == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, batch_idx * len(data), len(train_loader.dataset),
+                epoch, num_train_samples, len(train_loader.dataset),
 100. * batch_idx / len(train_loader), output.item()))
-
-
+            writer.add_scalar('data/train_loss', output.item(), epoch + batch_idx / len(train_loader))
+            
+    val_loss = 0.0
+    loss = nn.MSELoss(size_average=False)
+    for batch_idx, (data, target) in enumerate(val_loader):
+        data, target = data.to(device), target.to(device)
+        predicted = model(data)
+        output = loss(predicted, target)
+        val_loss += output.item()
+    val_loss /= len(val_loader.dataset)
+    writer.add_scalar('data/val_loss', val_loss, epoch+1)
+    print('Validation loss : {:.6f}'.format(val_loss))
+    
 def main():
 
     print("parsing")
@@ -75,13 +86,16 @@ help='disables CUDA training')
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=32, shuffle=False)
 
 
+    writer = SummaryWriter()
+    
+
     print("moving model")
     model = Model(nusers, nmovies, embed_size).to(device)
-    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
-
+    #optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+    optimizer = optim.Adam(model.parameters(), lr=0.01)
     print("training")
     for epoch in range(1, 100):
-        train(model, device, train_loader, optimizer, epoch)
+        train(model, device, train_loader, val_loader, optimizer, epoch, writer)
     
 if __name__ == '__main__':
     main()
