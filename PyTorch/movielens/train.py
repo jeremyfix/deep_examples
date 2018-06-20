@@ -9,7 +9,7 @@ import torch.nn.functional as F
 import numpy as np
 import sys
 import argparse
-from tensorboardX import SummaryWriter
+#from tensorboardX import SummaryWriter
     
 ########## Build the network as :
 ### Embedding(user)    Embedding(movie)
@@ -33,7 +33,7 @@ class Model(nn.Module):
         return y_pred.view(y_pred.size()[0])
 
 
-def train(model, device, train_loader, val_loader, optimizer, epoch, writer):
+def train(model, device, train_loader, val_loader, optimizer, epoch):#, writer):
     model.train()
     loss = nn.MSELoss()
     num_train_samples = 0
@@ -50,7 +50,7 @@ def train(model, device, train_loader, val_loader, optimizer, epoch, writer):
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, num_train_samples, len(train_loader.dataset),
 100. * batch_idx / len(train_loader), output.item()))
-            writer.add_scalar('data/train_loss', output.item(), epoch + batch_idx / len(train_loader))
+#writer.add_scalar('data/train_loss', output.item(), epoch + batch_idx / len(train_loader))
             
     val_loss = 0.0
     loss = nn.MSELoss(size_average=False)
@@ -60,7 +60,7 @@ def train(model, device, train_loader, val_loader, optimizer, epoch, writer):
         output = loss(predicted, target)
         val_loss += output.item()
     val_loss /= len(val_loader.dataset)
-    writer.add_scalar('data/val_loss', val_loss, epoch+1)
+#writer.add_scalar('data/val_loss', val_loss, epoch+1)
     print('Validation loss : {:.6f}'.format(val_loss))
     
 def main():
@@ -86,7 +86,7 @@ help='disables CUDA training')
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=32, shuffle=False)
 
 
-    writer = SummaryWriter()
+#writer = SummaryWriter()
     
 
     print("moving model")
@@ -95,7 +95,7 @@ help='disables CUDA training')
     optimizer = optim.Adam(model.parameters(), lr=0.01)
     print("training")
     for epoch in range(1, 100):
-        train(model, device, train_loader, val_loader, optimizer, epoch, writer)
+        train(model, device, train_loader, val_loader, optimizer, epoch)#, writer)
     
 if __name__ == '__main__':
     main()
