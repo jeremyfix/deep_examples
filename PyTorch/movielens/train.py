@@ -5,11 +5,14 @@
 # https://www.comp.nus.edu.sg/~xiangnan/papers/ncf.pdf
 
 import data as mldata
+import model as rs_model
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import numpy as np
+import math
 import sys
 import argparse
 
@@ -24,55 +27,24 @@ try:
     import torchsummary
 except:
     use_torch_summary = False
+
+def print_log(epoch, train_loss, progress):
+    """
+    epoch : int
+    train_acc : float
+    train_loss : float
+    progress in [0, 1] : progression of the epoch
+    """
+    length_bar = 40
+    prog_str = ("#"*math.floor(length_bar * progress)) + ("-"*math.floor(length_bar*(1.0-progress)))
+    sys.stdout.write('\rEpoch {}: [{}] Train loss : {:.6f}'.format(epoch, prog_str, train_loss))
+    sys.stdout.flush()
     
-
-########## Build the network as :
-### Embedding(user)    Embedding(movie)
-###           \         /
-###                |
-###             grade
-
-class Model(nn.Module):
-    """Container module with 2 embeddings layers, one dense"""
-
-    def __init__(self, nusers, nmovies, embed_size, rating_range):
-        super(Model, self).__init__()
-        self.drop = nn.Dropout(0.2, inplace=True)
-        self.rating_range = rating_range
-        self.embed_user = nn.Embedding(nusers, embed_size)
-        self.embed_user.weight.data.normal_(0, 0.01)
-        self.bias_user = nn.Embedding(nusers, 1)
-        self.embed_movie = nn.Embedding(nmovies, embed_size)
-        self.embed_movie.weight.data.normal_(0, 0.01)
-        self.bias_movie = nn.Embedding(nmovies, 1)
-
-    def forward0(self, inp):
-        inp = inp.long()
-        u_emb = self.embed_user(inp[:,0])
-        u_b = self.bias_user(inp[:,0])
-        m_emb = self.embed_movie(inp[:,1])
-        m_b = self.bias_movie(inp[:,1])
-        y_pred = (u_emb * m_emb).sum(1) + u_b.squeeze() + m_b.squeeze()
-        y_pred = F.sigmoid(y_pred) * (self.rating_range[1] - self.rating_range[0]) + self.rating_range[0]
-        return y_pred.view(y_pred.size()[0])
-    
-    def forward(self, inp):
-        inp = inp.long()
-        u_emb = self.embed_user(inp[:,0])
-        self.drop(u_emb)
-        u_b = self.bias_user(inp[:,0])
-        m_emb = self.embed_movie(inp[:,1])
-        self.drop(m_emb)
-        m_b = self.bias_movie(inp[:,1])
-        y_pred = (u_emb * m_emb).sum(1) + u_b.squeeze() + m_b.squeeze()
-        y_pred = F.sigmoid(y_pred) * (self.rating_range[1] - self.rating_range[0]) + self.rating_range[0]
-        return y_pred.view(y_pred.size()[0])
-
-
-def train(model, device, train_loader, val_loader, optimizer, epoch, writer):
+def train(model, device, train_loader, val_loader, optimizer, epoch, writer, best_val):
     model.train()
-    loss = nn.MSELoss()
+    loss = nn.MSELoss(size_average=False)
     num_train_samples = 0
+    train_loss = 0
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
@@ -82,13 +54,14 @@ def train(model, device, train_loader, val_loader, optimizer, epoch, writer):
         output.backward()
         optimizer.step()
         num_train_samples += len(data)
+        train_loss += output.item()
         if batch_idx % 100 == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, num_train_samples, len(train_loader.dataset),
-100. * batch_idx / len(train_loader), output.item()))
+            print_log(epoch, train_loss/num_train_samples, batch_idx / len(train_loader))
         if writer:
             writer.add_scalar('data/train_loss', output.item(), epoch + batch_idx / len(train_loader))
-            
+    print()
+
+    model.eval()
     val_loss = 0.0
     loss = nn.MSELoss(size_average=False)
     for batch_idx, (data, target) in enumerate(val_loader):
@@ -97,9 +70,14 @@ def train(model, device, train_loader, val_loader, optimizer, epoch, writer):
         output = loss(predicted, target)
         val_loss += output.item()
     val_loss /= len(val_loader.dataset)
+    if best_val is None or best_val > val_loss:
+        model.save("best_model.pt")
+        best_val = val_loss
+        print("Better model saved")
     if writer:
         writer.add_scalar('data/val_loss', val_loss, epoch+1)
     print('Validation loss : {:.6f}'.format(val_loss))
+    return best_val
     
 def main():
 
@@ -128,16 +106,15 @@ help='disables CUDA training')
         writer = SummaryWriter()
         
 
-    print("moving model")
-    model = Model(nusers, nmovies, embed_size, rating_range).to(device)
-    if use_torch_summary:
-        torchsummary.summary(model, (2, 2))
+    model = rs_model.Model(nusers, nmovies, embed_size, rating_range).to(device)
+    #if use_torch_summary:
+    #    torchsummary.summary(model, (2, 2))
     
-    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
-    #optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-3)
-    print("training")
-    for epoch in range(1, 100):
-        train(model, device, train_loader, val_loader, optimizer, epoch, writer)
+    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9, weight_decay=1e-4)
+
+    best_val = None
+    for epoch in range(1, 25):
+        best_val = train(model, device, train_loader, val_loader, optimizer, epoch, writer, best_val)
     
 if __name__ == '__main__':
     main()
