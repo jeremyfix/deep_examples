@@ -1,6 +1,9 @@
 # If segfault,
 # export LD_LIBRARY_PATH=/usr/lib/nvidia-384
 
+# See ?
+# https://www.comp.nus.edu.sg/~xiangnan/papers/ncf.pdf
+
 import data as mldata
 import torch
 import torch.nn as nn
@@ -9,8 +12,20 @@ import torch.nn.functional as F
 import numpy as np
 import sys
 import argparse
-#from tensorboardX import SummaryWriter
+
+use_tensorboard = True
+try:
+    from tensorboardXy import SummaryWriter
+except:
+    use_tensorboard = False
+
+use_torch_summary = True
+try:
+    import torchsummary
+except:
+    use_torch_summary = False
     
+
 ########## Build the network as :
 ### Embedding(user)    Embedding(movie)
 ###           \         /
@@ -32,6 +47,7 @@ class Model(nn.Module):
         self.bias_movie = nn.Embedding(nmovies, 1)
 
     def forward0(self, inp):
+        inp = inp.long()
         u_emb = self.embed_user(inp[:,0])
         u_b = self.bias_user(inp[:,0])
         m_emb = self.embed_movie(inp[:,1])
@@ -41,6 +57,7 @@ class Model(nn.Module):
         return y_pred.view(y_pred.size()[0])
     
     def forward(self, inp):
+        inp = inp.long()
         u_emb = self.embed_user(inp[:,0])
         self.drop(u_emb)
         u_b = self.bias_user(inp[:,0])
@@ -52,7 +69,7 @@ class Model(nn.Module):
         return y_pred.view(y_pred.size()[0])
 
 
-def train(model, device, train_loader, val_loader, optimizer, epoch):#, writer):
+def train(model, device, train_loader, val_loader, optimizer, epoch, writer):
     model.train()
     loss = nn.MSELoss()
     num_train_samples = 0
@@ -69,7 +86,8 @@ def train(model, device, train_loader, val_loader, optimizer, epoch):#, writer):
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, num_train_samples, len(train_loader.dataset),
 100. * batch_idx / len(train_loader), output.item()))
-#writer.add_scalar('data/train_loss', output.item(), epoch + batch_idx / len(train_loader))
+        if writer:
+            writer.add_scalar('data/train_loss', output.item(), epoch + batch_idx / len(train_loader))
             
     val_loss = 0.0
     loss = nn.MSELoss(size_average=False)
@@ -79,7 +97,8 @@ def train(model, device, train_loader, val_loader, optimizer, epoch):#, writer):
         output = loss(predicted, target)
         val_loss += output.item()
     val_loss /= len(val_loader.dataset)
-#writer.add_scalar('data/val_loss', val_loss, epoch+1)
+    if writer:
+        writer.add_scalar('data/val_loss', val_loss, epoch+1)
     print('Validation loss : {:.6f}'.format(val_loss))
     
 def main():
@@ -104,17 +123,21 @@ help='disables CUDA training')
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=32, shuffle=False)
 
-
-#writer = SummaryWriter()
-    
+    writer = None
+    if use_tensorboard:
+        writer = SummaryWriter()
+        
 
     print("moving model")
     model = Model(nusers, nmovies, embed_size, rating_range).to(device)
+    if use_torch_summary:
+        torchsummary.summary(model, (2, 2))
+    
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
     #optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-3)
     print("training")
     for epoch in range(1, 100):
-        train(model, device, train_loader, val_loader, optimizer, epoch)#, writer)
+        train(model, device, train_loader, val_loader, optimizer, epoch, writer)
     
 if __name__ == '__main__':
     main()
