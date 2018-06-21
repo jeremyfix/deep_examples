@@ -41,10 +41,6 @@ def display_embeddings(user_embedding, movie_embedding):
     movie_ar = movie_embedding.detach().numpy()
     print("Movie embedding range: [{},{}]".format(movie_ar.min(), movie_ar.max()))
 
-    user_tsne = manifold.TSNE(n_components=2,perplexity=40).fit_transform(user_ar)
-    movie_tsne = manifold.TSNE(n_components=2, perplexity=40).fit_transform(movie_ar)
-    
-    
     plt.figure()
     plt.subplot(121)
     plt.imshow(user_ar)
