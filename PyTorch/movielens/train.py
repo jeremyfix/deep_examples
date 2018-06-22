@@ -93,7 +93,7 @@ help='disables CUDA training')
     embed_size = args.embed_size
     
     print("dset")
-    train_dataset, val_dataset, nusers, nmovies, rating_range = mldata.train_val_dataset(args.root_dir, 'latest-small', 0.8)
+    train_dataset, val_dataset, nusers, nmovies, rating_range = mldata.train_val_dataset(args.root_dir, '20m', 0.8)
     print(use_cuda)
     device = torch.device("cuda" if use_cuda else "cpu")
     print("loading data")
