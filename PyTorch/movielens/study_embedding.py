@@ -3,33 +3,15 @@ import model as rs_model
 
 import torch
 import matplotlib.pyplot as plt
-from sklearn import manifold
 import tsne
+import pickle
 
-if len(sys.argv) != 2:
-    print("Usage : {} model.pt".format(sys.argv[0]))
-    sys.exit(-1)
+import argparse
 
-
-def tsne_embeddings(user_embedding, movie_embedding):
-    user_ar = user_embedding.detach().numpy()
-    print("Computing user embedding t-SNE")
-    #user_tsne = manifold(n_components=2,perplexity=40).fit_transform(user_ar)
-    user_tsne = tsne.tsne(user_ar, 2, user_ar.shape[1], 40)
-    
-    movie_ar = movie_embedding.detach().numpy()
-    print("Computing movie embedding t-SNE")
-    #movie_tsne = manifold.TSNE(n_components=2, perplexity=40).fit_transform(movie_ar)
-    user_tsne = tsne.tsne(movie_ar, 2, movie_ar.shape[1], 40)
-    
-    plt.figure()
-    plt.subplot(211)
-    plt.scatter(user_tsne[:,0], user_tsne[:,1])
-    plt.subplot(212)
-    plt.scatter(movie_tsne[:,0], movie_tsne[:,1])
-    #plt.show()
-    
-
+def tsne_embedding(embedding):
+    print("Running t-SNE : {} -> 2".format(embedding.shape[1]))
+    ar = embedding.detach().numpy()
+    return tsne.tsne(ar, 2, ar.shape[1], 20)
     
 def display_embeddings(user_embedding, movie_embedding):
     """
@@ -56,6 +38,16 @@ def display_embeddings(user_embedding, movie_embedding):
     
     
 
+parser = argparse.ArgumentParser(description='Visualization of the embeddings')
+parser.add_argument('model_filename', type=str, action='store', help='The pytorch saved model')
+parser.add_argument('--user_tsne', type=str, required=False, action='store', help='Some already computed user tsne if any')
+parser.add_argument('--movie_tsne', type=str, required=False, action='store', help='Some already computed movie tsne if any')
+
+args = parser.parse_args()
+
+print(args)
+
+    
 model_filename = sys.argv[1]
 
 state = torch.load(model_filename)
@@ -67,7 +59,28 @@ user_embeddings = model.embed_user.weight
 movie_embeddings = model.embed_movie.weight
 
 display_embeddings(user_embeddings, movie_embeddings)
-tsne_embeddings(user_embeddings, movie_embeddings)
+if args.user_tsne:
+    f = open(args.user_tsne, 'rb')
+    user_tsne = pickle.load(f)
+    f.close()
+else:
+    user_tsne = tsne_embedding(user_embeddings)
+    f = open('user_tsne.pkl','wb')
+    pickle.dump(user_tsne, f)
+    f.close()
+    print("t-SNE saved to user_tsne.pkl")
+    
+    
+
+
+#movie_tsne = tsne_embedding(movie_embeddings)
+
+plt.figure()
+plt.subplot(211)
+plt.scatter(user_tsne[:,0], user_tsne[:,1])
+#plt.subplot(212)
+#plt.scatter(movie_tsne[:,0], movie_tsne[:,1])
+
 
 plt.show()
 
