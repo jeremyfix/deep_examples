@@ -87,17 +87,18 @@ def main():
     parser.add_argument('--no-cuda', action='store_true', default=False,
 help='disables CUDA training')
     parser.add_argument('--embed_size', type=int, required=True, action='store')
+    parser.add_argument('--dataset', choices=['20m', 'latest-small','1m'], required=True)
     
     args = parser.parse_args()
     use_cuda = not args.no_cuda and torch.cuda.is_available()
     embed_size = args.embed_size
+    ml_dataset = args.dataset
     
-    print("dset")
-    train_dataset, val_dataset, nusers, nmovies, rating_range = mldata.train_val_dataset(args.root_dir, '20m', 0.8)
+    train_dataset, val_dataset, nusers, nmovies, rating_range = mldata.train_val_dataset(args.root_dir, ml_dataset, 0.8)
     print(use_cuda)
     device = torch.device("cuda" if use_cuda else "cpu")
-    print("loading data")
-    
+
+    print("Loading the data and splitting in train/val")
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=32, shuffle=False)
 
