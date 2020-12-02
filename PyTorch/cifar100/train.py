@@ -85,21 +85,22 @@ else:
 
 pin_memory = use_gpu
 
-#dataset_path = "/home/fix_jer/Datasets"
-#dataset_path = "/usr/users/ims/fix_jer/Datasets"
 dataset_path = "/opt/Datasets/"
 
 classnames = ['apple', 'aquarium_fish', 'baby', 'bear', 'beaver', 'bed', 'bee', 'beetle', 'bicycle', 'bottle', 'bowl', 'boy', 'bridge', 'bus', 'butterfly', 'camel', 'can', 'castle', 'caterpillar', 'cattle', 'chair', 'chimpanzee', 'clock', 'cloud', 'cockroach', 'couch', 'crab', 'crocodile', 'cup', 'dinosaur', 'dolphin', 'elephant', 'flatfish', 'forest', 'fox', 'girl', 'hamster', 'house', 'kangaroo', 'keyboard', 'lamp', 'lawn_mower', 'leopard', 'lion', 'lizard', 'lobster', 'man', 'maple_tree', 'motorcycle', 'mountain', 'mouse', 'mushroom', 'oak_tree', 'orange', 'orchid', 'otter', 'palm_tree', 'pear', 'pickup_truck', 'pine_tree', 'plain', 'plate', 'poppy', 'porcupine', 'possum', 'rabbit', 'raccoon', 'ray', 'road', 'rocket', 'rose', 'sea', 'seal', 'shark', 'shrew', 'skunk', 'skyscraper', 'snail', 'snake', 'spider', 'squirrel', 'streetcar', 'sunflower', 'sweet_pepper', 'table', 'tank', 'telephone', 'television', 'tiger', 'tractor', 'train', 'trout', 'tulip', 'turtle', 'wardrobe', 'whale', 'willow_tree', 'wolf', 'woman', 'worm']
 
 ####### Computing mean/std images from the training set
 ####### and splitting into train/val
-train_dataset = datasets.CIFAR100(train=True, root=dataset_path, download=True, transform=transforms.ToTensor())
+train_dataset = datasets.CIFAR100(train=True,
+                                  root=dataset_path,
+                                  download=True,
+                                  transform=transforms.ToTensor())
 
 num_train = len(train_dataset)
 indices = list(range(num_train))
 split = int(np.floor(valid_size * num_train))
 np.random.shuffle(indices)
-train_idx, valid_idx = indices[-128:], indices[:split]
+train_idx, valid_idx = indices[split:], indices[:split]
 train_sampler = SubsetRandomSampler(train_idx)
 valid_sampler = SubsetRandomSampler(valid_idx)
 
