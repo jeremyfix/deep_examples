@@ -78,7 +78,7 @@ num_workers = 2
 use_gpu = torch.cuda.is_available()
 if use_gpu:
     print("Using GPU{}".format(torch.cuda.current_device()))
-    device = torch.device('gpu')
+    device = torch.device('cuda')
 else:
     print("Using CPU")
     device = torch.device('cpu')
