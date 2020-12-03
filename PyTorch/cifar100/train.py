@@ -122,17 +122,19 @@ data_transforms = {
 
 if use_dataset_augmentation:
     data_transforms['train'] = transforms.Compose([
-
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomAffine(degrees=0,
+                                translate=(5./32., 5./32.), 
+                                scale=(0.8, 1.2)),
+        transforms.CenterCrop(32),
         transforms.ToTensor(),
-        RandomTranslate((5./32., 5./32.), interp='nearest'),
-        RandomAffine(zoom_range=(0.8, 1.2)),
-        RandomFlip(h=True, v=False),
         transforms.Lambda(lambda x: (x.sub(mean_tensor)).div(std_tensor))
     ])
 else:
     data_transforms['train'] = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Lambda(lambda x: (x.sub(mean_tensor)).div(std_tensor))
+        transforms.Lambda(lambda x: (x.sub(mean_tensor)).div(std_tensor)
+    )
     ])
 
 train_dataset = datasets.CIFAR100(train=True, root=dataset_path, download=True, transform=data_transforms['train'])
@@ -141,26 +143,26 @@ train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size,
 valid_dataset = datasets.CIFAR100(train=True, root=dataset_path, download=True, transform=data_transforms['valid'])
 valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch_size, sampler=valid_sampler, num_workers=num_workers, pin_memory=pin_memory)
 
-
 print("{} samples in the training set".format(len(train_idx)))
 print("{} samples in the validation set".format(len(valid_idx)))
-
 
 test_dataset = datasets.CIFAR100(train=False, root=dataset_path, download=True, transform=data_transforms['test'])
 test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
 
-# # Get a batch of training data
-# inputs, classes = next(iter(trainloader))
+# Get a batch of training data
+inputs, classes = next(iter(train_loader))
+inputs = inputs * std_tensor + mean_tensor
 
-# # Make a grid from batch
-# out = torchvision.utils.make_grid(inputs) # CHW
-# outn = out.numpy().transpose(1, 2, 0)*std+mean # HWC
+# Make a grid from batch
+out = torchvision.utils.make_grid(inputs) # CHW
+outn = out.numpy().transpose(1, 2, 0) # HWC
 
-# plt.figure()
-# plt.imshow(outn)
-# #plt.title(",".join([classnames[i] for i in classes]))
-# plt.axis('off')
-# plt.show()
+plt.figure()
+plt.imshow(outn)
+#plt.title(",".join([classnames[i] for i in classes]))
+plt.axis('off')
+plt.savefig('augmentations.pdf', bbox_inches='tight')
+plt.show()
 
 model = models.Net(use_dropout, use_bn, use_l2_reg)
 model = model.to(device)
@@ -217,6 +219,8 @@ for epoch in range(max_epochs):  # loop over the dataset multiple times
 
 
 print('Finished Training')
+test_metrics = test(model, test_loader, device, metrics)
+suptitle = "Test : Loss:%.3f | Acc : %.3f%%;" % (test_metrics['CE'], test_metrics['accuracy'])
 
 plt.figure()
 
@@ -237,7 +241,6 @@ plt.xlabel('Num samples')
 plt.legend(['train', 'val'], loc='center right')
 
 
-suptitle = "Test : Loss:%.3f | Acc : %.3f%%;" % (test_loss, test_acc)
 pdf_filename = ""
 if use_dataset_augmentation:
     suptitle += " dataAugment "

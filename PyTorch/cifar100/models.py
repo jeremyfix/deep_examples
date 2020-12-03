@@ -9,7 +9,7 @@ import torch.nn.functional as F
 # Convolution blocks : Conv - BN - ELU
 # C3s1 x 32, C3s1 x 64, Max2s2, C3s1x128, C3s1x256, GlobalAvg, Dense(500), Dropout(0.5), Dense(100), Softmax
 
-def conv_BN_relu(cin, cout, with_BN):
+def conv_BN_relu(cin, cout, with_BN, tf_function):
     batchnorm_momentum = 0.99
     batchnorm_epsilon = 1e-3
 
@@ -18,10 +18,10 @@ def conv_BN_relu(cin, cout, with_BN):
         nn.Conv2d(cout, cout, 3, padding=1, bias=not with_BN)
     ]
     if with_BN:
-        layers.append(nn.BatchNorm2d(32,
+        layers.append(nn.BatchNorm2d(cout,
                                      eps=batchnorm_epsilon,
                                      momentum=batchnorm_momentum))
-    layers.append(nn.ELU(inplace=True))
+    layers.append(tf_function())
     return layers
 
 
@@ -33,35 +33,39 @@ class Net(nn.Module):
         self.use_dropout = use_dropout
         self.use_batchnorm = use_batchnorm
         self.use_l2reg = use_l2reg
+        if use_l2reg:
+            self.l2_reg = 0.0005
+        else:
+            self.l2_reg = 0
 
         # We disable the bias if we use the batchnorm as the BN
         # already captures the bias
         self.use_bias = not self.use_batchnorm
 
+        tf_function = lambda: nn.ELU(inplace=True)
+
+        # The RF size is 32x32
         self.model = nn.Sequential(
-            *conv_BN_relu(3, 32, use_batchnorm),
-            *conv_BN_relu(32, 32, use_batchnorm),
+            *conv_BN_relu(3, 32, use_batchnorm, tf_function),
+            *conv_BN_relu(32, 32, use_batchnorm, tf_function),
             nn.MaxPool2d(2),
-            *conv_BN_relu(32, 64, use_batchnorm),
-            *conv_BN_relu(64, 64, use_batchnorm),
+            *conv_BN_relu(32, 64, use_batchnorm, tf_function),
+            *conv_BN_relu(64, 64, use_batchnorm, tf_function),
             nn.MaxPool2d(2),
-            *conv_BN_relu(64, 128, use_batchnorm),
-            *conv_BN_relu(128, 128, use_batchnorm),
-            nn.MaxPool2d(2),
-            *conv_BN_relu(128, 256, use_batchnorm),
-            *conv_BN_relu(256, 256, use_batchnorm),
-            nn.AvgPool2d(4)
+            *conv_BN_relu(64, 128, use_batchnorm, tf_function),
+            *conv_BN_relu(128, 128, use_batchnorm, tf_function),
+            nn.AvgPool2d(8)
         )
 
-        self.fc1   = nn.Linear(256, 500)
-        self.elu1  = nn.ELU(inplace=True)
+        classifier_layers = [
+            nn.Linear(128, 128),
+            tf_function()
+        ]
         if self.use_dropout:
-            self.drop  = nn.Dropout2d(0.5)
-        self.fc2   = nn.Linear(500, 100)
+            classifier_layers.append(nn.Dropout2d(0.5))
+        classifier_layers.append(nn.Linear(128, 100))
+        self.classifier = nn.Sequential(*classifier_layers) 
 
-        if use_l2reg:
-            pass
-        
         self.init()
         
     def init(self):
@@ -76,21 +80,20 @@ class Net(nn.Module):
             elif isinstance(m, nn.Linear):
                 nn.init.kaiming_normal_(m.weight.data)
                 m.bias.data.zero_()
+    
+    def penalty(self):
+        regularization = 0
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                regularization += m.weight.norm(2)
+            elif isinstance(m, nn.Linear):
+                regularization += m.weight.norm(2)
+        return self.l2_reg * regularization
 
     def forward(self, x):
-
         features = self.model(x)
         features = features.view(-1, self.num_flat_features(features))
-
-        x = self.fc1(features)
-        x = self.elu1(x)
-
-        if self.use_dropout:
-            x = self.drop(x)
-
-        x = self.fc2(x)
-
-        return x
+        return self.classifier(features)
 
     def num_flat_features(self, x):
         size = x.size()[1:]
@@ -98,6 +101,3 @@ class Net(nn.Module):
         for s in size:
             num_features *= s
         return num_features
-
-
-
