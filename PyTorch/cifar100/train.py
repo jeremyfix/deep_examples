@@ -220,7 +220,7 @@ for epoch in range(max_epochs):  # loop over the dataset multiple times
 
 print('Finished Training')
 test_metrics = test(model, test_loader, device, metrics)
-suptitle = "Test : Loss:%.3f | Acc : %.3f%%;" % (test_metrics['CE'], test_metrics['accuracy'])
+suptitle = "Test : Loss:%.3f | Acc : %.2f%%;" % (test_metrics['CE'], test_metrics['accuracy']*100)
 
 plt.figure()
 
@@ -229,7 +229,8 @@ plt.plot(train_metrics_history['times'], train_metrics_history['acc'])
 plt.plot(val_metrics_history['times'], val_metrics_history['acc'])
 plt.title('Model accuracy')
 plt.ylabel('accuracy')
-plt.xlabel('Num samples')
+plt.xlabel('Epoch')
+plt.ylim([0, 1])
 plt.legend(['train', 'val'], loc='center right')
 
 plt.subplot(122)
@@ -237,7 +238,8 @@ plt.plot(train_metrics_history['times'], train_metrics_history['loss'])
 plt.plot(val_metrics_history['times'], val_metrics_history['loss'])
 plt.title('Model loss')
 plt.ylabel('loss')
-plt.xlabel('Num samples')
+plt.xlabel('Epoch')
+plt.ylim([0, 4])
 plt.legend(['train', 'val'], loc='center right')
 
 

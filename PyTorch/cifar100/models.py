@@ -1,5 +1,7 @@
+import math
 import torch.nn as nn
 import torch.nn.functional as F
+import functools
 
 ################################################# Model
 
@@ -9,21 +11,28 @@ import torch.nn.functional as F
 # Convolution blocks : Conv - BN - ELU
 # C3s1 x 32, C3s1 x 64, Max2s2, C3s1x128, C3s1x256, GlobalAvg, Dense(500), Dropout(0.5), Dense(100), Softmax
 
-def conv_BN_relu(cin, cout, with_BN, tf_function):
-    batchnorm_momentum = 0.99
-    batchnorm_epsilon = 1e-3
+def conv_BN_relu(cin, cout, ksize, padding, with_BN, tf_function):
 
     layers = [
-        nn.Conv2d(cin, cout, 3, padding=1, bias=not with_BN),
-        nn.Conv2d(cout, cout, 3, padding=1, bias=not with_BN)
+        nn.Conv2d(cin, cout, ksize, padding=padding, bias=False)
     ]
     if with_BN:
-        layers.append(nn.BatchNorm2d(cout,
-                                     eps=batchnorm_epsilon,
-                                     momentum=batchnorm_momentum))
+        layers.append(nn.BatchNorm2d(cout))
     layers.append(tf_function())
     return layers
 
+def convBlock(cin, cout, with_BN, tf_function):
+    cinter = int(math.sqrt(cout/cin)) * cin
+
+    convbnrelu = functools.partial(conv_BN_relu,
+                                   with_BN=with_BN,
+                                   tf_function=tf_function)
+
+    layers = convbnrelu(cin, cinter, (1, 3), (0, 1)) + \
+             convbnrelu(cinter, cout, (3, 1), (1, 0)) + \
+             convbnrelu(cout, cout, (1,3), (0, 1)) + \
+             convbnrelu(cout, cout, (3, 1), (1, 0))
+    return layers
 
 class Net(nn.Module):
 
@@ -46,14 +55,14 @@ class Net(nn.Module):
 
         # The RF size is 32x32
         self.model = nn.Sequential(
-            *conv_BN_relu(3, 32, use_batchnorm, tf_function),
-            *conv_BN_relu(32, 32, use_batchnorm, tf_function),
+            *convBlock(3, 32, use_batchnorm, tf_function),
+            *convBlock(32, 32, use_batchnorm, tf_function),
             nn.MaxPool2d(2),
-            *conv_BN_relu(32, 64, use_batchnorm, tf_function),
-            *conv_BN_relu(64, 64, use_batchnorm, tf_function),
+            *convBlock(32, 64, use_batchnorm, tf_function),
+            *convBlock(64, 64, use_batchnorm, tf_function),
             nn.MaxPool2d(2),
-            *conv_BN_relu(64, 128, use_batchnorm, tf_function),
-            *conv_BN_relu(128, 128, use_batchnorm, tf_function),
+            *convBlock(64, 128, use_batchnorm, tf_function),
+            *convBlock(128, 128, use_batchnorm, tf_function),
             nn.AvgPool2d(8)
         )
 
