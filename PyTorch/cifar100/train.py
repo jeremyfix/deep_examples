@@ -22,7 +22,7 @@ from deepcs.testing import test
 
 # Local imports
 import models
-from utils import compute_mean_std
+from utils import compute_mean_std, ModelCheckpoint
 
 
 parser = argparse.ArgumentParser()
@@ -185,6 +185,7 @@ metrics = {
 scheduler = optim.lr_scheduler.StepLR(optimizer,
                                       step_size=50,
                                       gamma=0.5)
+model_checkpoint = ModelCheckpoint(model, 'best_model_weights.pt')
 
 train_metrics_history = {'times': [], 'loss':[], 'acc':[]}
 val_metrics_history = {'times': [], 'loss':[], 'acc':[]}
@@ -216,9 +217,14 @@ for epoch in range(max_epochs):  # loop over the dataset multiple times
     val_metrics_history['times'].append(epoch+1)
     val_metrics_history['acc'].append(val_metrics['accuracy'])
     val_metrics_history['loss'].append(val_metrics['CE'])
+    model_checkpoint.update(val_metrics['CE'])
 
 
 print('Finished Training')
+# Reload the best model
+model.load_state_dict(torch.load(model_checkpoint.best,
+                                  map_location=device))
+# And test it
 test_metrics = test(model, test_loader, device, metrics)
 suptitle = "Test : Loss:%.3f | Acc : %.2f%%;" % (test_metrics['CE'], test_metrics['accuracy']*100)
 

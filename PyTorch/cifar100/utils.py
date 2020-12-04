@@ -183,3 +183,24 @@ def compute_mean_std(loader):
 
     std = np.sqrt(std / total)
     return torch.from_numpy(mean), torch.from_numpy(std)
+
+
+class ModelCheckpoint:
+
+    def __init__(self, model, save_path):
+        self.model = model
+        self.min_loss = None
+        self.save_path = save_path
+
+    def update(self, loss):
+        if self.min_loss is None or loss < self.min_loss:
+            print("+" * 80 + "Saving a better model")
+            self.min_loss = loss
+            torch.save(self.model.state_dict(), self.save_path)
+
+    @property
+    def best(self):
+        return self.save_path
+
+            
+

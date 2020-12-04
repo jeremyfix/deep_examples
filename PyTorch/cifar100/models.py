@@ -41,15 +41,12 @@ class Net(nn.Module):
 
         self.use_dropout = use_dropout
         self.use_batchnorm = use_batchnorm
+        self.use_bias = not self.use_batchnorm
         self.use_l2reg = use_l2reg
         if use_l2reg:
             self.l2_reg = 0.0005
         else:
             self.l2_reg = 0
-
-        # We disable the bias if we use the batchnorm as the BN
-        # already captures the bias
-        self.use_bias = not self.use_batchnorm
 
         tf_function = lambda: nn.ELU(inplace=True)
 
@@ -58,21 +55,19 @@ class Net(nn.Module):
             *convBlock(3, 32, use_batchnorm, tf_function),
             *convBlock(32, 32, use_batchnorm, tf_function),
             nn.MaxPool2d(2),
-            *convBlock(32, 64, use_batchnorm, tf_function),
-            *convBlock(64, 64, use_batchnorm, tf_function),
-            nn.MaxPool2d(2),
-            *convBlock(64, 128, use_batchnorm, tf_function),
+            *convBlock(32, 128, use_batchnorm, tf_function),
             *convBlock(128, 128, use_batchnorm, tf_function),
+            nn.MaxPool2d(2),
+            *convBlock(128, 512, use_batchnorm, tf_function),
+            *convBlock(512, 512, use_batchnorm, tf_function),
             nn.AvgPool2d(8)
         )
-
-        classifier_layers = [
-            nn.Linear(128, 128),
-            tf_function()
-        ]
+        
+        classifier_layers = []
         if self.use_dropout:
             classifier_layers.append(nn.Dropout2d(0.5))
-        classifier_layers.append(nn.Linear(128, 100))
+
+        classifier_layers.append(nn.Linear(512, 100))
         self.classifier = nn.Sequential(*classifier_layers) 
 
         self.init()
