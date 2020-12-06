@@ -174,6 +174,26 @@ summary_text = "Summary of the model architecture\n"+ \
 
 print(summary_text)
 
+"""
+Adapted from : 
+https://github.com/seominseok0429/label-smoothing-visualization-pytorch
+"""
+class LabelSmoothingCrossEntropy(nn.Module):
+
+	def __init__(self, smoothing=0.1):
+		super(LabelSmoothingCrossEntropy, self).__init__()
+		self.smoothing = smoothing
+
+	def forward(self, x, target):
+		confidence = 1. - self.smoothing
+		logprobs = nn.functional.log_softmax(x, dim=-1)
+		nll_loss = -logprobs.gather(dim=-1, index=target.unsqueeze(1))
+		nll_loss = nll_loss.squeeze(1)
+		smooth_loss = -logprobs.mean(dim=-1)
+		loss = confidence * nll_loss + self.smoothing * smooth_loss
+		return loss.mean()
+
+train_loss = LabelSmoothingCrossEntropy(smoothing=0.1)
 loss = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(),
                       lr=base_lrate,
@@ -195,7 +215,7 @@ for epoch in range(max_epochs):  # loop over the dataset multiple times
 
     train(model,
           train_loader,
-          loss,
+          train_loss,
           optimizer,
           device,
           metrics
@@ -277,5 +297,5 @@ pdf_filename += "_bs{}_".format(batch_size)
 
 
 plt.suptitle(suptitle)
-
+plt.tight_layout()
 plt.savefig(pdf_filename+"_sched.pdf", bbox_inches='tight')

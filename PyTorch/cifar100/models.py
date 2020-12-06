@@ -11,10 +11,12 @@ import functools
 # Convolution blocks : Conv - BN - ELU
 # C3s1 x 32, C3s1 x 64, Max2s2, C3s1x128, C3s1x256, GlobalAvg, Dense(500), Dropout(0.5), Dense(100), Softmax
 
-def conv_BN_relu(cin, cout, ksize, padding, with_BN, tf_function):
+def conv_BN_relu(cin, cout, ksize, padding, with_BN, tf_function, stride=1):
 
     layers = [
-        nn.Conv2d(cin, cout, ksize, padding=padding, bias=False)
+        nn.Conv2d(cin, cout,
+                  ksize, padding=padding, stride=stride,
+                  bias=not with_BN)
     ]
     if with_BN:
         layers.append(nn.BatchNorm2d(cout))
@@ -44,20 +46,26 @@ class Net(nn.Module):
         self.use_bias = not self.use_batchnorm
         self.use_l2reg = use_l2reg
         if use_l2reg:
-            self.l2_reg = 0.0005
+            self.l2_reg = 0.001
         else:
             self.l2_reg = 0
 
-        tf_function = lambda: nn.ELU(inplace=True)
+        tf_function = lambda: nn.ReLU(inplace=True)
 
         # The RF size is 32x32
         self.model = nn.Sequential(
             *convBlock(3, 32, use_batchnorm, tf_function),
             *convBlock(32, 32, use_batchnorm, tf_function),
-            nn.MaxPool2d(2),
+            *conv_BN_relu(32, 32,
+                          (3,3) , (1,1),
+                          self.use_batchnorm, tf_function, stride=2),
+            # nn.MaxPool2d(2)
             *convBlock(32, 128, use_batchnorm, tf_function),
             *convBlock(128, 128, use_batchnorm, tf_function),
-            nn.MaxPool2d(2),
+            *conv_BN_relu(128, 128,
+                          (3,3) , (1,1),
+                          self.use_batchnorm, tf_function, stride=2),
+            # nn.MaxPool2d(2),
             *convBlock(128, 512, use_batchnorm, tf_function),
             *convBlock(512, 512, use_batchnorm, tf_function),
             nn.AvgPool2d(8)
@@ -74,15 +82,17 @@ class Net(nn.Module):
         
     def init(self):
         for m in self.modules():
-            if   isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight.data)
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight.data,
+                                       nonlinearity='relu')
                 if self.use_bias:
                     m.bias.data.zero_()
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
             elif isinstance(m, nn.Linear):
-                nn.init.kaiming_normal_(m.weight.data)
+                nn.init.kaiming_normal_(m.weight.data,
+                                       nonlinearity='relu')
                 m.bias.data.zero_()
     
     def penalty(self):
