@@ -52,6 +52,12 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    '--lsmooth',
+    help='Specify to use Label Smoothing',
+    action='store_true'
+)
+
+parser.add_argument(
     '--base_lrate',
     help='Which base learning rate to use',
     type=float,
@@ -72,6 +78,7 @@ use_bn = args.bn
 base_lrate = args.base_lrate
 batch_size = args.batch_size
 use_l2_reg = args.l2_reg
+use_lsmooth = args.lsmooth
 valid_size = 0.2
 num_workers = 2
 
@@ -198,7 +205,11 @@ class LabelSmoothingCrossEntropy(nn.Module):
 		loss = confidence * nll_loss + self.smoothing * smooth_loss
 		return loss.mean()
 
-train_loss = LabelSmoothingCrossEntropy(smoothing=0.2)
+if use_lsmooth:
+    train_loss = LabelSmoothingCrossEntropy(smoothing=0.2)
+else:
+    train_loss = nn.CrossEntropyLoss()
+
 loss = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(),
                       lr=base_lrate,
@@ -295,12 +306,19 @@ if use_bn:
     pdf_filename += "_BN_"
 else:
     suptitle += " - "
+if use_lsmooth:
+    suptitle += " LabSmooth "
+    pdf_filename += "_labelsmooth_"
+else:
+    suptitle += " - "
+
 suptitle += " lr{} ".format(base_lrate)
 suptitle += " bs{} ".format(batch_size)
+
 pdf_filename += "_lr{}_".format(base_lrate)
 pdf_filename += "_bs{}_".format(batch_size)
 
 
-plt.suptitle(suptitle)
+# plt.suptitle(suptitle)
 plt.tight_layout()
 plt.savefig(pdf_filename+"_sched.pdf", bbox_inches='tight')

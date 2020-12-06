@@ -50,20 +50,26 @@ class Net(nn.Module):
 
         # The RF size is 32x32
         self.model = nn.Sequential(
-            *convBlock(3, 32, use_batchnorm, tf_function),
-            *convBlock(32, 32, use_batchnorm, tf_function),
-            *conv_BN_relu(32, 32,
+            *convBlock(3, 96, use_batchnorm, tf_function),
+            *convBlock(96, 96, use_batchnorm, tf_function),
+            *conv_BN_relu(96, 96,
                           (3,3) , (1,1),
                           self.use_batchnorm, tf_function, stride=2),
             # nn.MaxPool2d(2)
-            *convBlock(32, 128, use_batchnorm, tf_function),
-            *convBlock(128, 128, use_batchnorm, tf_function),
-            *conv_BN_relu(128, 128,
+            *convBlock(96, 192, use_batchnorm, tf_function),
+            *convBlock(192, 192, use_batchnorm, tf_function),
+            *conv_BN_relu(192, 192,
                           (3,3) , (1,1),
                           self.use_batchnorm, tf_function, stride=2),
+            *conv_BN_relu(192, 512, (1,1) , (0,0),
+                          self.use_batchnorm, tf_function),
+            *conv_BN_relu(512, 512, (1,1) , (0,0),
+                          self.use_batchnorm, tf_function),
+            *conv_BN_relu(512, 512, (1,1) , (0,0),
+                          self.use_batchnorm, tf_function),
             # nn.MaxPool2d(2),
-            *convBlock(128, 512, use_batchnorm, tf_function),
-            *convBlock(512, 512, use_batchnorm, tf_function),
+            # *convBlock(128, 512, use_batchnorm, tf_function),
+            # *convBlock(512, 512, use_batchnorm, tf_function),
             nn.AvgPool2d(8)
         )
         
