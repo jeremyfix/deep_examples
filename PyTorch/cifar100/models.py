@@ -38,17 +38,13 @@ def convBlock(cin, cout, with_BN, tf_function):
 
 class Net(nn.Module):
 
-    def __init__(self, use_dropout, use_batchnorm, use_l2reg):
+    def __init__(self, use_dropout, use_batchnorm, l2reg):
         super(Net, self).__init__()
 
         self.use_dropout = use_dropout
         self.use_batchnorm = use_batchnorm
         self.use_bias = not self.use_batchnorm
-        self.use_l2reg = use_l2reg
-        if use_l2reg:
-            self.l2_reg = 0.001
-        else:
-            self.l2_reg = 0
+        self.l2_reg = l2reg
 
         tf_function = lambda: nn.ReLU(inplace=True)
 
@@ -97,12 +93,14 @@ class Net(nn.Module):
     
     def penalty(self):
         regularization = 0
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                regularization += m.weight.norm(2)
-            elif isinstance(m, nn.Linear):
-                regularization += m.weight.norm(2)
-        return self.l2_reg * regularization
+        if self.l2reg is not None:
+            for m in self.modules():
+                if isinstance(m, nn.Conv2d):
+                    regularization += m.weight.norm(2)
+                elif isinstance(m, nn.Linear):
+                    regularization += m.weight.norm(2)
+            regularization *= self.l2_reg
+        return regularization
 
     def forward(self, x):
         features = self.model(x)

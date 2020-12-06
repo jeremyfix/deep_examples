@@ -75,6 +75,11 @@ use_l2_reg = args.l2_reg
 valid_size = 0.2
 num_workers = 2
 
+if use_l2_reg:
+	l2_reg = 0.0025
+else:
+	l2_reg = None
+
 use_gpu = torch.cuda.is_available()
 if use_gpu:
     print("Using GPU{}".format(torch.cuda.current_device()))
@@ -164,7 +169,7 @@ plt.axis('off')
 plt.savefig('augmentations.pdf', bbox_inches='tight')
 plt.show()
 
-model = models.Net(use_dropout, use_bn, use_l2_reg)
+model = models.Net(use_dropout, use_bn, l2_reg)
 model = model.to(device)
 
 # Display information about the model
@@ -193,7 +198,7 @@ class LabelSmoothingCrossEntropy(nn.Module):
 		loss = confidence * nll_loss + self.smoothing * smooth_loss
 		return loss.mean()
 
-train_loss = LabelSmoothingCrossEntropy(smoothing=0.1)
+train_loss = LabelSmoothingCrossEntropy(smoothing=0.2)
 loss = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(),
                       lr=base_lrate,
@@ -281,7 +286,7 @@ if use_dropout:
 else:
     suptitle += " - "
 if use_l2_reg:
-    suptitle += " l2 "
+    suptitle += f" l2{l2_reg} "
     pdf_filename += "_l2_"
 else:
     suptitle += " - "
