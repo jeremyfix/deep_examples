@@ -206,7 +206,7 @@ class LabelSmoothingCrossEntropy(nn.Module):
 		return loss.mean()
 
 if use_lsmooth:
-    train_loss = LabelSmoothingCrossEntropy(smoothing=0.2)
+    train_loss = LabelSmoothingCrossEntropy(smoothing=0.1)
 else:
     train_loss = nn.CrossEntropyLoss()
 
