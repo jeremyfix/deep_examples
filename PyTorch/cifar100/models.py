@@ -11,13 +11,27 @@ import functools
 # Convolution blocks : Conv - BN - ELU
 # C3s1 x 32, C3s1 x 64, Max2s2, C3s1x128, C3s1x256, GlobalAvg, Dense(500), Dropout(0.5), Dense(100), Softmax
 
-def conv_BN_relu(cin, cout, ksize, padding, with_BN, tf_function, stride=1):
+def BN_relu_conv(cin, cout, ksize, padding, with_BN, tf_function, stride=1):
 
-    layers = [
+    layers = []
+    if with_BN:
+        layers.append(nn.BatchNorm2d(cin))
+    layers.append(tf_function())
+    layers.append(
         nn.Conv2d(cin, cout,
                   ksize, padding=padding, stride=stride,
                   bias=not with_BN)
-    ]
+    )
+    return layers
+
+def conv_BN_relu(cin, cout, ksize, padding, with_BN, tf_function, stride=1):
+
+    layers = []
+    layers.append(
+        nn.Conv2d(cin, cout,
+                  ksize, padding=padding, stride=stride,
+                  bias=not with_BN)
+    )
     if with_BN:
         layers.append(nn.BatchNorm2d(cout))
     layers.append(tf_function())
@@ -26,14 +40,17 @@ def conv_BN_relu(cin, cout, ksize, padding, with_BN, tf_function, stride=1):
 def convBlock(cin, cout, with_BN, tf_function):
     cinter = int(math.sqrt(cout/cin)) * cin
 
-    convbnrelu = functools.partial(conv_BN_relu,
+    bnreluconv = functools.partial(BN_relu_conv,
                                    with_BN=with_BN,
                                    tf_function=tf_function)
+    # convbnrelu = functools.partial(conv_BN_relu,
+    #                                with_BN=with_BN,
+    #                                tf_function=tf_function)
 
-    layers = convbnrelu(cin, cinter, (1, 3), (0, 1)) + \
-             convbnrelu(cinter, cout, (3, 1), (1, 0)) + \
-             convbnrelu(cout, cout, (1,3), (0, 1)) + \
-             convbnrelu(cout, cout, (3, 1), (1, 0))
+    layers = bnreluconv(cin, cinter, (1, 3), (0, 1)) + \
+             bnreluconv(cinter, cout, (3, 1), (1, 0)) + \
+             bnreluconv(cout, cout, (1,3), (0, 1)) + \
+             bnreluconv(cout, cout, (3, 1), (1, 0))
     return layers
 
 class Net(nn.Module):
