@@ -63,7 +63,7 @@ class Net(nn.Module):
         self.use_bias = not self.use_batchnorm
         self.l2_reg = l2reg
 
-        tf_function = lambda: nn.ReLU(inplace=True)
+        tf_function = lambda: nn.ReLU()
 
         # The RF size is 32x32
         self.model = nn.Sequential(
