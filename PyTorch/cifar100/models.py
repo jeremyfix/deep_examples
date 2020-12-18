@@ -40,17 +40,17 @@ def conv_BN_relu(cin, cout, ksize, padding, with_BN, tf_function, stride=1):
 def convBlock(cin, cout, with_BN, tf_function):
     cinter = int(math.sqrt(cout/cin)) * cin
 
-    bnreluconv = functools.partial(BN_relu_conv,
-                                   with_BN=with_BN,
-                                   tf_function=tf_function)
-    # convbnrelu = functools.partial(conv_BN_relu,
+    # bnreluconv = functools.partial(BN_relu_conv,
     #                                with_BN=with_BN,
     #                                tf_function=tf_function)
+    convbnrelu = functools.partial(conv_BN_relu,
+                                   with_BN=with_BN,
+                                   tf_function=tf_function)
 
-    layers = bnreluconv(cin, cinter, (1, 3), (0, 1)) + \
-             bnreluconv(cinter, cout, (3, 1), (1, 0)) + \
-             bnreluconv(cout, cout, (1,3), (0, 1)) + \
-             bnreluconv(cout, cout, (3, 1), (1, 0))
+    layers = convbnrelu(cin, cinter, (1, 3), (0, 1)) + \
+             convbnrelu(cinter, cout, (3, 1), (1, 0)) + \
+             convbnrelu(cout, cout, (1,3), (0, 1)) + \
+             convbnrelu(cout, cout, (3, 1), (1, 0))
     return layers
 
 class Net(nn.Module):
