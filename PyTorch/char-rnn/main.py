@@ -30,7 +30,7 @@ def trainnet(args):
     base_lrate = 0.01
     num_epochs = args.num_epochs
     clip_value = 5
-    sample_length = 100
+    sample_length = 200
 
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -66,7 +66,7 @@ def trainnet(args):
     optimizer = optim.Adam(model.parameters(), lr=base_lrate)
 
     metrics = {'CE': loss, 'accuracy': accuracy}
-    start_string = ds.charmap.start_line + 'Maitre corbeau'
+    start_string = ds.charmap.start_line + 'LA JUMENT ET LE PONEY'
 
     for i in range(num_epochs):
         train(model, train_loader, loss, optimizer, device, metrics,
