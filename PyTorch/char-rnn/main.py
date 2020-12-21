@@ -11,6 +11,7 @@ import logging
 # External imports
 import torch
 import torch.optim as optim
+from torch.optim import lr_scheduler
 import deepcs
 from deepcs.training import train
 from deepcs.testing import test
@@ -64,6 +65,9 @@ def trainnet(args):
 
     # loss = torch.nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=base_lrate)
+    scheduler = optim.lr_scheduler.StepLR(optimizer,
+                                          step_size=5,
+                                          gamma=0.5)
 
     metrics = {'CE': loss, 'accuracy': accuracy}
     start_string = 'LA JUMENT ET '
@@ -73,6 +77,7 @@ def trainnet(args):
     for i in range(num_epochs):
         train(model, train_loader, loss, optimizer, device, metrics,
               grad_clip=clip_value)
+        scheduler.step()
         # Sample an example from the model
         generated = sample_from_model(ds.charmap, model, sample_length,
                                       start_string, device)
@@ -108,13 +113,13 @@ if __name__ == '__main__':
                         choices=['train', 'sample'])
     parser.add_argument("--slength", type=int,
                         help="The length of the strings for training",
-                        default=30)
+                        default=60)
     parser.add_argument("--batch_size", type=int,
                         help="The mini batch size",
-                        default=32)
+                        default=64)
     parser.add_argument("--num_layers", type=int,
                         help="The number of RNN layers",
-                        default=1)
+                        default=2)
     parser.add_argument("--num_cells", type=int,
                         help="The number of cells per RNN layer",
                         default=123)
