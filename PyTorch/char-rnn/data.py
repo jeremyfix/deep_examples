@@ -10,17 +10,14 @@ import torch
 
 def chunks(collection, chunk_size):
     for i in range(0, len(collection), chunk_size):
-        yield collection[i:i+chunk_size]
+        if i+chunk_size+1 < len(collection):
+            yield collection[i:i+chunk_size], collection[i+1:i+chunk_size+1]
 
 class CharMap():
-
-    _start_char = '¤'
 
     def __init__(self, chars=None):
         if chars is not None:
             self.idx2char = [chr(ic) for ic in sorted([ord(c) for c in chars])]
-            # Add a start of line character
-            self.idx2char.append(self._start_char)
             self._build_char_map()
 
     def _build_char_map(self):
@@ -29,10 +26,6 @@ class CharMap():
     @property
     def vocab_size(self):
         return len(self.idx2char)
-
-    @property
-    def start_line(self):
-        return self._start_char
 
     def decode(self, stridx):
         return "".join([self.idx2char[ci] for ci in stridx])
@@ -72,13 +65,14 @@ class Dataset():
         # because we need explicit constructions
 
         # Note: we drop the last piece since it may be shorter
-        chunked_text = [self.charmap.encode(mystr) for mystr in chunks(text, slength)][:-1]
+        x_sentences = []
+        y_sentences = []
+        for chunk_x, chunk_y in chunks(text, slength):
+            x_sentences.append(self.charmap.encode(chunk_x))
+            y_sentences.append(self.charmap.encode(chunk_y))
 
-        self.y = torch.LongTensor(chunked_text)
-        # X is the same y, shifted to right and prependend with the
-        # start of line character
-        self.X = torch.roll(self.y, 1, 1)
-        self.X[:, 0] = self._charmap.encode(self._charmap.start_line)[0]
+        self.X = torch.LongTensor(x_sentences)
+        self.y = torch.LongTensor(y_sentences)
 
     def __getitem__(self, idx):
         return self.X[idx], self.y[idx]

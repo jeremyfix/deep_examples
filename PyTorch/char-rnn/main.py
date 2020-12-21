@@ -66,7 +66,7 @@ def trainnet(args):
     optimizer = optim.Adam(model.parameters(), lr=base_lrate)
 
     metrics = {'CE': loss, 'accuracy': accuracy}
-    start_string = ds.charmap.start_line + 'LA JUMENT ET LE PONEY'
+    start_string = 'LA JUMENT ET LE PONEY'
 
     for i in range(num_epochs):
         train(model, train_loader, loss, optimizer, device, metrics,
@@ -88,7 +88,7 @@ def sample_from_model(charmap, model, length, start_string, device):
 
 def sample(args):
     charmap = data.CharMap.load('charmap')
-    start_string = charmap.start_line + 'Maitre corbeau'
+    start_string = 'Maitre corbeau'
     model = None #TODO
     device = None
     raise NotImplementedError
