@@ -32,11 +32,15 @@ class Dataset():
         # Note: we drop the last piece since it may be shorter
         chunked_text = [str2idx(mystr) for mystr in chunks(text, slength)][:-1]
 
-        self.y = torch.Tensor(chunked_text).int()
+        self.y = torch.Tensor(chunked_text).long()
         # X is the same y, shifted to right and prependend with the
         # start of line character
         self.X = torch.roll(self.y, 1, 1)
         self.X[:, 0] = -1
+
+    @property
+    def vocab_size(self):
+        return len(self.idx2char)
 
     def decode(self, stridx):
         return "".join([self.idx2char[ci] for ci in stridx])
