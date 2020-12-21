@@ -79,7 +79,7 @@ def trainnet(args):
 def sample_from_model(charmap, model, length, start_string, device):
     start_input = charmap.encode(start_string)
     start_tensor = torch.LongTensor(start_input)
-    start_tensor.to(device)
+    start_tensor = start_tensor.to(device)
     # print(f"Start tensor\n{start_tensor}\ncorresponding to\n>>>\n{charmap.decode(start_tensor.view(-1))}\n<<<")
     model.eval()
     generated = model.sample(start_tensor, length)
