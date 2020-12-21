@@ -25,6 +25,7 @@ def trainnet(args):
     logger = logging.getLogger()
 
     batch_size = args.batch_size
+    num_embeddings = 256
     num_cells = args.num_cells
     num_layers = args.num_layers
     num_hidden = args.num_hidden
@@ -48,6 +49,7 @@ def trainnet(args):
 
     # Build the model
     model = models.Model(ds.charmap.vocab_size,
+                         num_embeddings,
                          num_cells,
                          num_layers,
                          num_hidden)

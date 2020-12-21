@@ -9,22 +9,25 @@ import torch.nn.functional as F
 
 class Model(nn.Module):
 
-    def __init__(self, vocab_size, num_cells, num_layers, num_hidden):
+    def __init__(self, vocab_size, num_embeddings,
+                 num_cells, num_layers, num_hidden):
         super(Model, self).__init__()
 
         self.vocab_size = vocab_size
+        self.num_embeddings = num_embeddings
         self.num_cells = num_cells
         self.num_layers = num_layers
-        self.rnn = nn.LSTM(vocab_size, num_cells, num_layers)
+        self.embedding = nn.Linear(vocab_size, num_embeddings)
+        self.rnn = nn.LSTM(num_embeddings, num_cells, num_layers)
         self.classifier = nn.Sequential(
             # nn.Dropout2d(0.5),
-            nn.Linear(num_cells, num_hidden),
-            nn.ReLU(),
+            # nn.Linear(num_cells, num_hidden),
+            # nn.ReLU(),
             # nn.Dropout2d(0.5),
-            nn.Linear(num_hidden, num_hidden),
-            nn.ReLU(),
+            # nn.Linear(num_hidden, num_hidden),
+            # nn.ReLU(),
             # nn.Dropout2d(0.5),
-            nn.Linear(num_hidden, vocab_size)
+            nn.Linear(num_cells, vocab_size)
         )
 
     def to_one_hot(self, x):
@@ -49,6 +52,8 @@ class Model(nn.Module):
         # the inputs to the LSTM must be (seq_len, batch, input_size)
         # we first need to one-hot encode the inputs
         inputs = self.to_one_hot(x)
+
+        inputs = self.embedding(inputs.reshape(seq_len*batch, -1)).reshape(seq_len, batch, self.num_embeddings)
 
         # input to the LSTM must be (seq_len, batch, vocab_size)
         # h0, c0 are (num_layers, batch, hidden_size)
@@ -80,6 +85,7 @@ class Model(nn.Module):
             for xtidx in x:
                 xt = torch.zeros(1, 1, self.vocab_size, device=device)
                 xt[0, 0, xtidx] = 1
+                xt = self.embedding(xt.view(1, -1)).reshape(1, 1,self.num_embeddings)
                 output, (h0, c0) = self.rnn(xt, (h0, c0))
                 output = output.transpose(0, 1)
                 output = self.classifier(output).view(-1)
@@ -93,6 +99,7 @@ class Model(nn.Module):
             for it in range(length):
                 xt = torch.zeros(1, 1, self.vocab_size, device=device)
                 xt[0, 0, next_char_idx] = 1
+                xt = self.embedding(xt.view(1, -1)).reshape(1, 1,self.num_embeddings)
                 output, (h0, c0) = self.rnn(xt, (h0, c0))
                 output = output.transpose(0, 1)
                 output = self.classifier(output).view(-1)
