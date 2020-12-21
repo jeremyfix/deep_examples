@@ -21,6 +21,9 @@ class Model(nn.Module):
             nn.Linear(num_cells, num_hidden),
             nn.ReLU(),
             # nn.Dropout2d(0.5),
+            nn.Linear(num_hidden, num_hidden),
+            nn.ReLU(),
+            # nn.Dropout2d(0.5),
             nn.Linear(num_hidden, vocab_size)
         )
 
