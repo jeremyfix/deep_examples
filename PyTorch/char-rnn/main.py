@@ -22,13 +22,14 @@ def train(args):
 
     # Load the data
     ds = data.Dataset(args.slength)
-    print(ds.charmap)
 
     train_loader = torch.utils.data.DataLoader(dataset=ds,
                                                batch_size=batch_size,
                                                shuffle=False)
 
-    model = models.Model(ds.charmap.vocab_size, num_cells, num_layers,
+    model = models.Model(ds.charmap.vocab_size,
+                         num_cells,
+                         num_layers,
                          num_hidden)
 
     X, y = next(iter(train_loader))
@@ -39,12 +40,12 @@ def train(args):
 
 def sample(args):
     
-    #TODO: load a dataset (or maybe just the char/map) from a saved one
     charmap = data.CharMap.load('charmap')
-    print(charmap)
     start_string = charmap.start_line + 'Maitre corbeau'
     start_input = charmap.encode(start_string)
-    print(start_input)
+    # Build up the warm up tensor and add the batch size dimension
+    start_tensor = torch.Tensor(start_input).long().unsqueeze(dim=0)
+    print(f"Start tensor\n{start_tensor}\ncorresponding to\n>>>\n{charmap.decode(start_tensor.view(-1))}\n<<<")
 
 
 if __name__ == '__main__':
