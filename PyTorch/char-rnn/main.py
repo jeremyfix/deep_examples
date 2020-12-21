@@ -66,7 +66,9 @@ def trainnet(args):
     optimizer = optim.Adam(model.parameters(), lr=base_lrate)
 
     metrics = {'CE': loss, 'accuracy': accuracy}
-    start_string = 'LA JUMENT ET LE PONEY'
+    start_string = 'LA JUMENT ET '
+    generated = sample_from_model(ds.charmap, model, sample_length,
+                                  start_string, device)
 
     for i in range(num_epochs):
         train(model, train_loader, loss, optimizer, device, metrics,

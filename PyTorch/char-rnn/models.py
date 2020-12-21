@@ -1,8 +1,10 @@
 
 # Standard imports
 # External imports
+import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class Model(nn.Module):
@@ -59,33 +61,43 @@ class Model(nn.Module):
         return output
 
     def sample(self, x, length):
-        # x is (seq_len, )
-        if len(x.shape) != 1:
-            print("""We expect just a one dimensional array for the input when
-                  sampling""")
-        batch = 1
-        # inputs is (seq_len, batch, vocab_size)
-        device = x.device
-        generated_seq = []
-        h0 = c0 = torch.zeros(self.num_layers, batch, self.num_cells, device=device)
-        next_char_idx = None
-        # Feed the network with the starting tensor
-        for xtidx in x:
-            xt = torch.zeros(1, 1, self.vocab_size, device=device)
-            xt[0, 0, xtidx] = 1
-            output, (h0, c0) = self.rnn(xt, (h0, c0))
-            output = output.transpose(0, 1)
-            output = self.classifier(output)
-            next_char_idx = output.argmax()
+        with torch.no_grad():
+            # x is (seq_len, )
+            if len(x.shape) != 1:
+                print("""We expect just a one dimensional array for the input when
+                      sampling""")
+            batch = 1
+            # inputs is (seq_len, batch, vocab_size)
+            device = x.device
+            generated_seq = []
+            h0 = c0 = torch.zeros(self.num_layers, batch, self.num_cells, device=device)
+            next_char_idx = None
+            # Feed the network with the starting tensor
+            charidxs = np.arange(self.vocab_size)
+            for xtidx in x:
+                xt = torch.zeros(1, 1, self.vocab_size, device=device)
+                xt[0, 0, xtidx] = 1
+                output, (h0, c0) = self.rnn(xt, (h0, c0))
+                output = output.transpose(0, 1)
+                output = self.classifier(output).view(-1)
+                # probs may not actually perfectly sum to 1
+                probs = F.softmax(output, dim=0).numpy()
+                probs = probs/probs.sum()
+                # next_char_idx is used only when leaving the loop
+                next_char_idx = np.random.choice(charidxs, p=probs)
 
-        generated_seq.append(next_char_idx)
-        for it in range(length):
-            xt = torch.zeros(1, 1, self.vocab_size, device=device)
-            xt[0, 0, next_char_idx] = 1
-            output, (h0, c0) = self.rnn(xt, (h0, c0))
-            output = output.transpose(0, 1)
-            output = self.classifier(output)
-            next_char_idx = output.argmax()
             generated_seq.append(next_char_idx)
-        generated_seq = torch.LongTensor(generated_seq).to(device)
-        return torch.hstack((x, generated_seq))
+            for it in range(length):
+                xt = torch.zeros(1, 1, self.vocab_size, device=device)
+                xt[0, 0, next_char_idx] = 1
+                output, (h0, c0) = self.rnn(xt, (h0, c0))
+                output = output.transpose(0, 1)
+                output = self.classifier(output).view(-1)
+                # probs may not actually perfectly sum to 1
+                probs = F.softmax(output, dim=0).numpy()
+                probs = probs/probs.sum()
+                # next_char_idx is used only when leaving the loop
+                next_char_idx = np.random.choice(charidxs, p=probs)
+                generated_seq.append(next_char_idx)
+            generated_seq = torch.LongTensor(generated_seq).to(device)
+            return torch.hstack((x, generated_seq))
