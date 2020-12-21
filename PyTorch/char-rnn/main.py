@@ -7,39 +7,68 @@ fables de La Fontaine.
 
 # Standard imports
 import argparse
+import logging
 # External imports
 import torch
+import torch.optim as optim
+import deepcs
+from deepcs.training import train
+from deepcs.testing import test
+from deepcs.metrics import accuracy
 # Local imports
 import data
 import models
 
-def train(args):
+def trainnet(args):
+    logger = logging.getLogger()
 
     batch_size = args.batch_size
     num_cells = args.num_cells
     num_layers = args.num_layers
     num_hidden = args.num_hidden
+    base_lrate = 0.01
+
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+    else:
+        device = torch.device('cpu')
 
     # Load the data
     ds = data.Dataset(args.slength)
+    logger.info(f"The vocabulary contains {ds.charmap.vocab_size} elements")
 
     train_loader = torch.utils.data.DataLoader(dataset=ds,
                                                batch_size=batch_size,
                                                shuffle=False)
 
+    # Build the model
     model = models.Model(ds.charmap.vocab_size,
                          num_cells,
                          num_layers,
                          num_hidden)
+    model.to(device)
 
-    X, y = next(iter(train_loader))
-    model(X)
+    # Build up the loss/optimizer/metrics
+    def loss(seq_outputs, seq_targets):
+        # seq_outputs is (batch, seq_len, vocab_size)
+        # set_targets is (batch, seq_len)
+        batch, seq_len = seq_targets.shape
+        seq_outputs = seq_outputs.view(batch*seq_len, -1)
+        seq_targets = seq_targets.view(-1)
 
-    # Build up the loss/optimizer/..
+        preds = seq_outputs.argmax(axis=1)
+        return torch.nn.CrossEntropyLoss()(seq_outputs, seq_targets)
+    # loss = torch.nn.CrossEntropyLoss()
+    optimizer = optim.SGD(model.parameters(),
+                          lr=base_lrate,
+                          momentum=0.9)
+
+    metrics = {} #'CE': loss, 'accuracy': accuracy}
+
+    train(model, train_loader, loss, optimizer, device, metrics)
 
 
 def sample(args):
-    
     charmap = data.CharMap.load('charmap')
     start_string = charmap.start_line + 'Maitre corbeau'
     start_input = charmap.encode(start_string)
@@ -49,6 +78,11 @@ def sample(args):
 
 
 if __name__ == '__main__':
+
+    logging.basicConfig()
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
     parser = argparse.ArgumentParser()
     parser.add_argument("command",
                         choices=['train', 'sample'])
@@ -70,6 +104,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     if args.command == 'train':
-        train(args)
+        trainnet(args)
     else:
         sample(args)

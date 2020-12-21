@@ -25,21 +25,23 @@ class Model(nn.Module):
 
     def forward(self, x):
         # x is (batch, seq_len)
-        (batch, seq_len), input_size = x.shape, self.vocab_size
+        (batch, seq_len), vocab_size = x.shape, self.vocab_size
 
         x_idx = x.view(-1)
 
         # the inputs to the LSTM must be (seq_len, batch, input_size)
         # we first need to one-hot encode the inputs
-        inputs = torch.zeros(seq_len*batch, input_size)
+        inputs = torch.zeros(seq_len*batch, vocab_size)
         inputs[x_idx] = 1
-        inputs = torch.transpose(inputs.view(batch, seq_len, input_size), 0, 1)
+        inputs = torch.transpose(inputs.view(batch, seq_len, vocab_size), 0, 1)
 
-        # input to the LSTM must be (seq_len, batch, input_size)
+        # input to the LSTM must be (seq_len, batch, vocab_size)
         # h0, c0 are (num_layers, batch, hidden_size)
         h0 = c0 = torch.zeros(self.num_layers, batch, self.num_cells)
         output, (hn, cn) = self.rnn(inputs, (h0, c0))
-
-        # The output is (batch_size, vocab_size)
+        # output is (seq_len, batch, num_cells)
+        output = output.transpose(0, 1)
+        # output is (batch, seq_len, num_cells)
         output = self.classifier(output)
+        # output is (batch, seq_len, vocab_size)
         return output
