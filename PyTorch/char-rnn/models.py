@@ -87,5 +87,5 @@ class Model(nn.Module):
             output = self.classifier(output)
             next_char_idx = output.argmax()
             generated_seq.append(next_char_idx)
-        generated_seq = torch.LongTensor(generated_seq)
+        generated_seq = torch.LongTensor(generated_seq).to(device)
         return torch.hstack((x, generated_seq))
