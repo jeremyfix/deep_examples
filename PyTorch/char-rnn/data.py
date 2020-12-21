@@ -74,11 +74,11 @@ class Dataset():
         # Note: we drop the last piece since it may be shorter
         chunked_text = [self.charmap.encode(mystr) for mystr in chunks(text, slength)][:-1]
 
-        self.y = torch.Tensor(chunked_text).long()
+        self.y = torch.LongTensor(chunked_text)
         # X is the same y, shifted to right and prependend with the
         # start of line character
         self.X = torch.roll(self.y, 1, 1)
-        self.X[:, 0] = -1
+        self.X[:, 0] = self._charmap.encode(self._charmap.start_line)[0]
 
     def __getitem__(self, idx):
         return self.X[idx], self.y[idx]

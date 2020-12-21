@@ -15,6 +15,7 @@ import deepcs
 from deepcs.training import train
 from deepcs.testing import test
 from deepcs.metrics import accuracy
+import deepcs.display
 # Local imports
 import data
 import models
@@ -27,6 +28,8 @@ def trainnet(args):
     num_layers = args.num_layers
     num_hidden = args.num_hidden
     base_lrate = 0.01
+    num_epochs = args.num_epochs
+    clip_value = 5
 
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -39,13 +42,14 @@ def trainnet(args):
 
     train_loader = torch.utils.data.DataLoader(dataset=ds,
                                                batch_size=batch_size,
-                                               shuffle=False)
+                                               shuffle=True)
 
     # Build the model
     model = models.Model(ds.charmap.vocab_size,
                          num_cells,
                          num_layers,
                          num_hidden)
+    print(deepcs.display.torch_summarize(model))
     model.to(device)
 
     # Build up the loss/optimizer/metrics
@@ -55,17 +59,18 @@ def trainnet(args):
         batch, seq_len = seq_targets.shape
         seq_outputs = seq_outputs.view(batch*seq_len, -1)
         seq_targets = seq_targets.view(-1)
-
-        preds = seq_outputs.argmax(axis=1)
         return torch.nn.CrossEntropyLoss()(seq_outputs, seq_targets)
+
     # loss = torch.nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(),
                           lr=base_lrate,
                           momentum=0.9)
 
-    metrics = {} #'CE': loss, 'accuracy': accuracy}
+    metrics = {'CE': loss, 'accuracy': accuracy}
 
-    train(model, train_loader, loss, optimizer, device, metrics)
+    for i in range(num_epochs):
+        train(model, train_loader, loss, optimizer, device, metrics,
+              grad_clip=clip_value)
 
 
 def sample(args):
@@ -97,10 +102,13 @@ if __name__ == '__main__':
                         default=1)
     parser.add_argument("--num_cells", type=int,
                         help="The number of cells per RNN layer",
-                        default=128)
+                        default=123)
     parser.add_argument("--num_hidden", type=int,
                         help="The number of hidden units for the dense output",
                         default=128)
+    parser.add_argument("--num_epochs", type=int,
+                        help="The number of epochs for training",
+                        default=100)
 
     args = parser.parse_args()
     if args.command == 'train':
