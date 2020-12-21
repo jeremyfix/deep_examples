@@ -2,7 +2,12 @@
 """
 Character level RNN, based on an original idea by A. Karpathy
 This scripts here learns a character level language model from the 
-fables de La Fontaine.
+fables de La Fontaine and texts from other Fabulistes (Fénélon, Bensérade)
+
+python3 main.py train --num_cells 512 --num_layers 2 --slength 30
+seems to end up overfitting 
+Train metrics :     CE: 0.5426379216358533 | accuracy: 0.8413417754281907
+INFO:root:[33/100] Validation:   Loss : 2.206 | Acc : 50.919%
 """
 
 # Standard imports
@@ -31,7 +36,7 @@ def trainnet(args):
     num_hidden = args.num_hidden
     base_lrate = 0.01
     num_epochs = args.num_epochs
-    clip_value = 5
+    clip_value = None
     sample_length = 200
 
     if torch.cuda.is_available():
@@ -43,7 +48,13 @@ def trainnet(args):
     ds = data.Dataset(args.slength)
     logger.info(f"The vocabulary contains {ds.charmap.vocab_size} elements")
 
-    train_loader = torch.utils.data.DataLoader(dataset=ds,
+    train_size = int(0.8 * len(ds))
+    valid_size = len(ds) - train_size
+    train_ds, valid_ds = torch.utils.data.random_split(ds, [train_size, valid_size])
+    train_loader = torch.utils.data.DataLoader(dataset=train_ds,
+                                               batch_size=batch_size,
+                                               shuffle=True)
+    valid_loader = torch.utils.data.DataLoader(dataset=valid_ds,
                                                batch_size=batch_size,
                                                shuffle=True)
 
@@ -68,18 +79,24 @@ def trainnet(args):
     # loss = torch.nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=base_lrate)
     scheduler = optim.lr_scheduler.StepLR(optimizer,
-                                          step_size=5,
+                                          step_size=10,
                                           gamma=0.5)
 
     metrics = {'CE': loss, 'accuracy': accuracy}
     start_string = 'LA JUMENT ET '
     generated = sample_from_model(ds.charmap, model, sample_length,
                                   start_string, device)
+    logger.info(f"Generated \n>>>\n{generated}\n<<<")
 
     for i in range(num_epochs):
         train(model, train_loader, loss, optimizer, device, metrics,
               grad_clip=clip_value)
         scheduler.step()
+        val_metrics = test(model, valid_loader, device, metrics)
+        logger.info("[%d/%d] Validation:   Loss : %.3f | Acc : %.3f%%"% (i,
+                                                                   num_epochs,
+                                                                   val_metrics['CE'],
+                                                                   100.*val_metrics['accuracy']))
         # Sample an example from the model
         generated = sample_from_model(ds.charmap, model, sample_length,
                                       start_string, device)
@@ -121,10 +138,10 @@ if __name__ == '__main__':
                         default=64)
     parser.add_argument("--num_layers", type=int,
                         help="The number of RNN layers",
-                        default=2)
+                        default=1)
     parser.add_argument("--num_cells", type=int,
                         help="The number of cells per RNN layer",
-                        default=123)
+                        default=512)
     parser.add_argument("--num_hidden", type=int,
                         help="The number of hidden units for the dense output",
                         default=128)
