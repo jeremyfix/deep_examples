@@ -73,12 +73,12 @@ def trainnet(args):
               grad_clip=clip_value)
         # Sample an example from the model
         generated = sample_from_model(ds.charmap, model, sample_length,
-                                      start_string)
+                                      start_string, device)
         logger.info(f"Generated \n>>>\n{generated}\n<<<")
 
-def sample_from_model(charmap, model, length, start_string):
+def sample_from_model(charmap, model, length, start_string, device):
     start_input = charmap.encode(start_string)
-    start_tensor = torch.LongTensor(start_input)
+    start_tensor = torch.LongTensor(start_input, device=device)
     # print(f"Start tensor\n{start_tensor}\ncorresponding to\n>>>\n{charmap.decode(start_tensor.view(-1))}\n<<<")
     model.eval()
     generated = model.sample(start_tensor, length)
@@ -89,8 +89,9 @@ def sample(args):
     charmap = data.CharMap.load('charmap')
     start_string = charmap.start_line + 'Maitre corbeau'
     model = None #TODO
+    device = None
     raise NotImplementedError
-    sample_from_model(charmap, model, 50, start_string)
+    sample_from_model(charmap, model, 50, start_string, device)
 
 
 if __name__ == '__main__':
