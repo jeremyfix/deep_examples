@@ -22,26 +22,35 @@ def train(args):
 
     # Load the data
     ds = data.Dataset(args.slength)
+    print(ds.charmap)
 
     train_loader = torch.utils.data.DataLoader(dataset=ds,
                                                batch_size=batch_size,
                                                shuffle=False)
 
-    model = models.Model(ds.vocab_size, num_cells, num_layers,
+    model = models.Model(ds.charmap.vocab_size, num_cells, num_layers,
                          num_hidden)
 
     X, y = next(iter(train_loader))
-    print(X.shape)
     model(X)
+
+    # Build up the loss/optimizer/..
 
 
 def sample(args):
-    pass
+    
+    #TODO: load a dataset (or maybe just the char/map) from a saved one
+    charmap = data.CharMap.load('charmap')
+    print(charmap)
+    start_string = charmap.start_line + 'Maitre corbeau'
+    start_input = charmap.encode(start_string)
+    print(start_input)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("command",
-                        choices=['train', 'predict'])
+                        choices=['train', 'sample'])
     parser.add_argument("--slength", type=int,
                         help="The length of the strings for training",
                         default=30)
