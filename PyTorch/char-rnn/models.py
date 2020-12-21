@@ -81,7 +81,7 @@ class Model(nn.Module):
                 output = output.transpose(0, 1)
                 output = self.classifier(output).view(-1)
                 # probs may not actually perfectly sum to 1
-                probs = F.softmax(output, dim=0).numpy()
+                probs = F.softmax(output, dim=0).cpu().numpy()
                 probs = probs/probs.sum()
                 # next_char_idx is used only when leaving the loop
                 next_char_idx = np.random.choice(charidxs, p=probs)
@@ -94,7 +94,7 @@ class Model(nn.Module):
                 output = output.transpose(0, 1)
                 output = self.classifier(output).view(-1)
                 # probs may not actually perfectly sum to 1
-                probs = F.softmax(output, dim=0).numpy()
+                probs = F.softmax(output, dim=0).cpu().numpy()
                 probs = probs/probs.sum()
                 # next_char_idx is used only when leaving the loop
                 next_char_idx = np.random.choice(charidxs, p=probs)
