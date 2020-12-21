@@ -30,6 +30,7 @@ def trainnet(args):
     base_lrate = 0.01
     num_epochs = args.num_epochs
     clip_value = 5
+    sample_length = 100
 
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -62,24 +63,34 @@ def trainnet(args):
         return torch.nn.CrossEntropyLoss()(seq_outputs, seq_targets)
 
     # loss = torch.nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(),
-                          lr=base_lrate,
-                          momentum=0.9)
+    optimizer = optim.Adam(model.parameters(), lr=base_lrate)
 
     metrics = {'CE': loss, 'accuracy': accuracy}
+    start_string = ds.charmap.start_line + 'Maitre corbeau'
 
     for i in range(num_epochs):
         train(model, train_loader, loss, optimizer, device, metrics,
               grad_clip=clip_value)
+        # Sample an example from the model
+        generated = sample_from_model(ds.charmap, model, sample_length,
+                                      start_string)
+        logger.info(f"Generated \n>>>\n{generated}\n<<<")
+
+def sample_from_model(charmap, model, length, start_string):
+    start_input = charmap.encode(start_string)
+    start_tensor = torch.LongTensor(start_input)
+    # print(f"Start tensor\n{start_tensor}\ncorresponding to\n>>>\n{charmap.decode(start_tensor.view(-1))}\n<<<")
+    model.eval()
+    generated = model.sample(start_tensor, length)
+    return charmap.decode(generated)
 
 
 def sample(args):
     charmap = data.CharMap.load('charmap')
     start_string = charmap.start_line + 'Maitre corbeau'
-    start_input = charmap.encode(start_string)
-    # Build up the warm up tensor and add the batch size dimension
-    start_tensor = torch.Tensor(start_input).long().unsqueeze(dim=0)
-    print(f"Start tensor\n{start_tensor}\ncorresponding to\n>>>\n{charmap.decode(start_tensor.view(-1))}\n<<<")
+    model = None #TODO
+    raise NotImplementedError
+    sample_from_model(charmap, model, 50, start_string)
 
 
 if __name__ == '__main__':
