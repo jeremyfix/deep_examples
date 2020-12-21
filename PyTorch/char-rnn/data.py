@@ -54,7 +54,7 @@ class Dataset():
         self.logger = logging.getLogger()
         # Load the data and build up the conversion map
         self.logger.info("Loading the data")
-        text = open('fables.txt').read()
+        text = open('fabulistes.txt').read()
         chars = list(set(text))
         self._charmap = CharMap(chars)
         self._charmap.save('charmap')
