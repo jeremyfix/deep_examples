@@ -30,7 +30,7 @@ def trainnet(args):
     logger = logging.getLogger()
 
     batch_size = args.batch_size
-    num_embeddings = 256
+    embeddings_dim = 64
     num_cells = args.num_cells
     num_layers = args.num_layers
     num_hidden = args.num_hidden
@@ -60,7 +60,7 @@ def trainnet(args):
 
     # Build the model
     model = models.Model(ds.charmap.vocab_size,
-                         num_embeddings,
+                         embeddings_dim,
                          num_cells,
                          num_layers,
                          num_hidden)
@@ -78,10 +78,10 @@ def trainnet(args):
 
     # loss = torch.nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=base_lrate)
+    # optimizer = optim.SGD(model.parameters(), lr=base_lrate, momentum=0.9)
     scheduler = optim.lr_scheduler.StepLR(optimizer,
                                           step_size=10,
                                           gamma=0.5)
-
     metrics = {'CE': loss, 'accuracy': accuracy}
     start_string = 'LA JUMENT ET '
     generated = sample_from_model(ds.charmap, model, sample_length,
@@ -138,10 +138,10 @@ if __name__ == '__main__':
                         default=64)
     parser.add_argument("--num_layers", type=int,
                         help="The number of RNN layers",
-                        default=1)
+                        default=2)
     parser.add_argument("--num_cells", type=int,
                         help="The number of cells per RNN layer",
-                        default=512)
+                        default=64)
     parser.add_argument("--num_hidden", type=int,
                         help="The number of hidden units for the dense output",
                         default=128)
