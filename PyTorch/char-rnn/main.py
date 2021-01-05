@@ -98,6 +98,7 @@ def trainnet(args):
                                                                    val_metrics['CE'],
                                                                    100.*val_metrics['accuracy']))
         # Sample an example from the model
+        model.eval()
         generated = sample_from_model(ds.charmap, model, sample_length,
                                       start_string, device)
         logger.info(f"Generated \n>>>\n{generated}\n<<<")

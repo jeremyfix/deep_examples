@@ -21,7 +21,7 @@ class Model(nn.Module):
                                       embedding_dim=embedding_dim)
         self.rnn = nn.LSTM(embedding_dim,
                            num_cells, num_layers,
-                          batch_first=True)
+                           batch_first=True)
         self.classifier = nn.Sequential(
             # nn.Dropout2d(0.5),
             nn.Linear(num_cells, num_hidden),
