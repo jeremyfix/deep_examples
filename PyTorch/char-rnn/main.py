@@ -36,7 +36,7 @@ def trainnet(args):
     num_hidden = args.num_hidden
     base_lrate = 0.01
     num_epochs = args.num_epochs
-    clip_value = 5
+    clip_value = 1
     sample_length = 200
 
     if torch.cuda.is_available():
@@ -77,8 +77,8 @@ def trainnet(args):
         return torch.nn.CrossEntropyLoss()(seq_outputs, seq_targets)
 
     # loss = torch.nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=base_lrate)
-    # optimizer = optim.SGD(model.parameters(), lr=base_lrate, momentum=0.9)
+    optimizer = optim.RMSprop(model.parameters(), lr=base_lrate)
+    # optimizer = optim.Adam(model.parameters(), lr=base_lrate)
     scheduler = optim.lr_scheduler.StepLR(optimizer,
                                           step_size=10,
                                           gamma=0.5)
