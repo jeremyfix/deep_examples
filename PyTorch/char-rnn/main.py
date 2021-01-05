@@ -36,7 +36,7 @@ def trainnet(args):
     num_hidden = args.num_hidden
     base_lrate = 0.01
     num_epochs = args.num_epochs
-    clip_value = None
+    clip_value = 5
     sample_length = 200
 
     if torch.cuda.is_available():
@@ -83,10 +83,17 @@ def trainnet(args):
                                           step_size=10,
                                           gamma=0.5)
     metrics = {'CE': loss, 'accuracy': accuracy}
-    start_string = 'LA JUMENT ET '
+    start_string = 'LA GRENOUILLE '
     generated = sample_from_model(ds.charmap, model, sample_length,
                                   start_string, device)
     logger.info(f"Generated \n>>>\n{generated}\n<<<")
+
+    batch = next(iter(train_loader))
+    idx = 1
+    print("[" +",".join([str(i.item()) for i in batch[0][idx]]) + "]")
+    print(ds.charmap.decode(batch[0][idx]))
+    print("[" +",".join([str(i.item()) for i in batch[1][idx]]) + "]")
+    print(ds.charmap.decode(batch[1][idx]))
 
     for i in range(num_epochs):
         train(model, train_loader, loss, optimizer, device, metrics,
@@ -99,6 +106,9 @@ def trainnet(args):
                                                                    100.*val_metrics['accuracy']))
         # Sample an example from the model
         model.eval()
+        generated = sample_from_model(ds.charmap, model, sample_length,
+                                      start_string, device)
+        logger.info(f"Generated \n>>>\n{generated}\n<<<")
         generated = sample_from_model(ds.charmap, model, sample_length,
                                       start_string, device)
         logger.info(f"Generated \n>>>\n{generated}\n<<<")
