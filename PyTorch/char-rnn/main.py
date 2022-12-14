@@ -13,6 +13,7 @@ INFO:root:[33/100] Validation:   Loss : 2.206 | Acc : 50.919%
 # Standard imports
 import argparse
 import logging
+
 # External imports
 import torch
 import torch.optim as optim
@@ -20,11 +21,13 @@ from torch.optim import lr_scheduler
 import deepcs
 from deepcs.training import train
 from deepcs.testing import test
-from deepcs.metrics import accuracy
+from deepcs.metrics import BatchAccuracy, BatchCE
 import deepcs.display
+
 # Local imports
 import data
 import models
+
 
 def trainnet(args):
     logger = logging.getLogger()
@@ -40,9 +43,9 @@ def trainnet(args):
     sample_length = 200
 
     if torch.cuda.is_available():
-        device = torch.device('cuda')
+        device = torch.device("cuda")
     else:
-        device = torch.device('cpu')
+        device = torch.device("cpu")
 
     # Load the data
     ds = data.Dataset(args.slength)
@@ -51,19 +54,17 @@ def trainnet(args):
     train_size = int(0.8 * len(ds))
     valid_size = len(ds) - train_size
     train_ds, valid_ds = torch.utils.data.random_split(ds, [train_size, valid_size])
-    train_loader = torch.utils.data.DataLoader(dataset=train_ds,
-                                               batch_size=batch_size,
-                                               shuffle=True)
-    valid_loader = torch.utils.data.DataLoader(dataset=valid_ds,
-                                               batch_size=batch_size,
-                                               shuffle=True)
+    train_loader = torch.utils.data.DataLoader(
+        dataset=train_ds, batch_size=batch_size, shuffle=True
+    )
+    valid_loader = torch.utils.data.DataLoader(
+        dataset=valid_ds, batch_size=batch_size, shuffle=True
+    )
 
     # Build the model
-    model = models.Model(ds.charmap.vocab_size,
-                         embeddings_dim,
-                         num_cells,
-                         num_layers,
-                         num_hidden)
+    model = models.Model(
+        ds.charmap.vocab_size, embeddings_dim, num_cells, num_layers, num_hidden
+    )
     print(deepcs.display.torch_summarize(model))
     model.to(device)
 
@@ -72,46 +73,58 @@ def trainnet(args):
         # seq_outputs is (batch, seq_len, vocab_size)
         # set_targets is (batch, seq_len)
         batch, seq_len = seq_targets.shape
-        seq_outputs = seq_outputs.view(batch*seq_len, -1)
+        seq_outputs = seq_outputs.view(batch * seq_len, -1)
         seq_targets = seq_targets.view(-1)
         return torch.nn.CrossEntropyLoss()(seq_outputs, seq_targets)
 
     # loss = torch.nn.CrossEntropyLoss()
     optimizer = optim.RMSprop(model.parameters(), lr=base_lrate)
     # optimizer = optim.Adam(model.parameters(), lr=base_lrate)
-    scheduler = optim.lr_scheduler.StepLR(optimizer,
-                                          step_size=10,
-                                          gamma=0.5)
-    metrics = {'CE': loss, 'accuracy': accuracy}
-    start_string = 'LA GRENOUILLE '
-    generated = sample_from_model(ds.charmap, model, sample_length,
-                                  start_string, device)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
+    metrics = {"accuracy": BatchAccuracy()}
+    start_string = "LA GRENOUILLE "
+    generated = sample_from_model(
+        ds.charmap, model, sample_length, start_string, device
+    )
     logger.info(f"Generated \n>>>\n{generated}\n<<<")
 
     batch = next(iter(train_loader))
     idx = 1
-    print("[" +",".join([str(i.item()) for i in batch[0][idx]]) + "]")
+    print("[" + ",".join([str(i.item()) for i in batch[0][idx]]) + "]")
     print(ds.charmap.decode(batch[0][idx]))
-    print("[" +",".join([str(i.item()) for i in batch[1][idx]]) + "]")
+    print("[" + ",".join([str(i.item()) for i in batch[1][idx]]) + "]")
     print(ds.charmap.decode(batch[1][idx]))
 
     for i in range(num_epochs):
-        train(model, train_loader, loss, optimizer, device, metrics,
-              grad_clip=clip_value)
+        train(
+            model, train_loader, loss, optimizer, device, metrics, grad_clip=clip_value
+        )
         scheduler.step()
         val_metrics = test(model, valid_loader, device, metrics)
-        logger.info("[%d/%d] Validation:   Loss : %.3f | Acc : %.3f%%"% (i,
-                                                                   num_epochs,
-                                                                   val_metrics['CE'],
-                                                                   100.*val_metrics['accuracy']))
+        logger.info(
+            "[%d/%d] Validation:   Loss : -- | Acc : %.3f%%"
+            % (i, num_epochs, 100 * val_metrics["accuracy"])
+        )
+        # logger.info(
+        #     "[%d/%d] Validation:   Loss : %.3f | Acc : %.3f%%"
+        #     % (i, num_epochs, val_metrics["CE"], 100.0 * val_metrics["accuracy"])
+        # )
         # Sample an example from the model
         model.eval()
-        generated = sample_from_model(ds.charmap, model, sample_length,
-                                      start_string, device)
-        logger.info(f"Generated \n>>>\n{generated}\n<<<")
-        generated = sample_from_model(ds.charmap, model, sample_length,
-                                      start_string, device)
-        logger.info(f"Generated \n>>>\n{generated}\n<<<")
+        generated = sample_from_model(
+            ds.charmap, model, sample_length, start_string, device
+        )
+        logger.info(
+            f"Generated \n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n{generated}\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+        )
+        generated = sample_from_model(
+            ds.charmap, model, sample_length, start_string, device
+        )
+        logger.info(
+            f"Generated \n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n{generated}\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+        )
+        # logger.info(f"Generated \n>>>\n{generated}\n<<<")
+
 
 def sample_from_model(charmap, model, length, start_string, device):
     start_input = charmap.encode(start_string)
@@ -124,44 +137,46 @@ def sample_from_model(charmap, model, length, start_string, device):
 
 
 def sample(args):
-    charmap = data.CharMap.load('charmap')
-    start_string = 'Maitre corbeau'
-    model = None #TODO
+    charmap = data.CharMap.load("charmap")
+    start_string = "Maitre corbeau"
+    model = None  # TODO
     device = None
     raise NotImplementedError
     sample_from_model(charmap, model, 50, start_string, device)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     logging.basicConfig()
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("command",
-                        choices=['train', 'sample'])
-    parser.add_argument("--slength", type=int,
-                        help="The length of the strings for training",
-                        default=60)
-    parser.add_argument("--batch_size", type=int,
-                        help="The mini batch size",
-                        default=64)
-    parser.add_argument("--num_layers", type=int,
-                        help="The number of RNN layers",
-                        default=2)
-    parser.add_argument("--num_cells", type=int,
-                        help="The number of cells per RNN layer",
-                        default=64)
-    parser.add_argument("--num_hidden", type=int,
-                        help="The number of hidden units for the dense output",
-                        default=128)
-    parser.add_argument("--num_epochs", type=int,
-                        help="The number of epochs for training",
-                        default=100)
+    parser.add_argument("command", choices=["train", "sample"])
+    parser.add_argument(
+        "--slength", type=int, help="The length of the strings for training", default=60
+    )
+    parser.add_argument(
+        "--batch_size", type=int, help="The mini batch size", default=64
+    )
+    parser.add_argument(
+        "--num_layers", type=int, help="The number of RNN layers", default=2
+    )
+    parser.add_argument(
+        "--num_cells", type=int, help="The number of cells per RNN layer", default=64
+    )
+    parser.add_argument(
+        "--num_hidden",
+        type=int,
+        help="The number of hidden units for the dense output",
+        default=128,
+    )
+    parser.add_argument(
+        "--num_epochs", type=int, help="The number of epochs for training", default=100
+    )
 
     args = parser.parse_args()
-    if args.command == 'train':
+    if args.command == "train":
         trainnet(args)
     else:
         sample(args)
