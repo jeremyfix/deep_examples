@@ -33,7 +33,7 @@ def trainnet(args):
     logger = logging.getLogger()
 
     batch_size = args.batch_size
-    embeddings_dim = 64
+    embeddings_dim = 128
     num_cells = args.num_cells
     num_layers = args.num_layers
     num_hidden = args.num_hidden
@@ -58,7 +58,7 @@ def trainnet(args):
         dataset=train_ds, batch_size=batch_size, shuffle=True
     )
     valid_loader = torch.utils.data.DataLoader(
-        dataset=valid_ds, batch_size=batch_size, shuffle=True
+        dataset=valid_ds, batch_size=batch_size, shuffle=False
     )
 
     # Build the model
