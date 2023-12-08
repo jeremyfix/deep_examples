@@ -64,6 +64,23 @@ use_lsmooth = args.lsmooth
 valid_size = 0.2
 num_workers = 2
 
+
+runname = ""
+if use_dataset_augmentation:
+    runname += "dataAugment"
+if use_dropout:
+    runname += "_dropout_"
+if use_l2_reg:
+    runname += "_l2_"
+if use_bn:
+    runname += "_BN_"
+if use_lsmooth:
+    runname += "_labelsmooth_"
+
+runname += "_lr{}_".format(base_lrate)
+runname += "_bs{}_".format(batch_size)
+
+
 if use_l2_reg:
     l2_reg = 0.0025
 else:
@@ -340,7 +357,7 @@ train_fmetrics = {"CE": BatchCE(), "accuracy": BatchAccuracy()}
 test_fmetrics = {"CE": BatchCE(), "accuracy": BatchAccuracy()}
 
 scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.5)
-model_checkpoint = ModelCheckpoint(model, "best_model_weights.pt")
+model_checkpoint = ModelCheckpoint(model, f"{runname}_best_model_weights.pt")
 
 train_metrics_history = {"times": [], "loss": [], "acc": []}
 val_metrics_history = {"times": [], "loss": [], "acc": []}
@@ -400,40 +417,31 @@ plt.ylim([0, 4])
 plt.legend(["train", "val"], loc="center right")
 
 
-pdf_filename = ""
 if use_dataset_augmentation:
     suptitle += " dataAugment "
-    pdf_filename += "dataAugment"
 else:
     suptitle += " - "
 if use_dropout:
     suptitle += " dropout "
-    pdf_filename += "_dropout_"
 else:
     suptitle += " - "
 if use_l2_reg:
     suptitle += f" l2{l2_reg} "
-    pdf_filename += "_l2_"
 else:
     suptitle += " - "
 if use_bn:
     suptitle += " BN "
-    pdf_filename += "_BN_"
 else:
     suptitle += " - "
 if use_lsmooth:
     suptitle += " LabSmooth "
-    pdf_filename += "_labelsmooth_"
 else:
     suptitle += " - "
 
 suptitle += " lr{} ".format(base_lrate)
 suptitle += " bs{} ".format(batch_size)
 
-pdf_filename += "_lr{}_".format(base_lrate)
-pdf_filename += "_bs{}_".format(batch_size)
-
 
 # plt.suptitle(suptitle)
 plt.tight_layout()
-plt.savefig(pdf_filename + "_sched.pdf", bbox_inches="tight")
+plt.savefig(runname + "_sched.pdf", bbox_inches="tight")
